@@ -196,7 +196,7 @@ const S = {
   btnGold: { background: C.gold, color: C.bg },
   btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}` },
   input: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none', width: '100%' },
-  select: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none' },
+  select: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none', width: '100%' },
   label: { fontFamily: font.body, fontSize: 12, fontWeight: 500, color: C.textDim, marginBottom: 4, display: 'block' },
   badge: (bg, color) => ({ fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: bg, color, display: 'inline-block' }),
   table: { width: '100%', borderCollapse: 'collapse', fontFamily: font.body, fontSize: 13 },
@@ -334,20 +334,21 @@ const GlobalSearch = ({ data, open, onClose }) => {
 // ============================================================================
 const NAV = [
   { label: 'Dashboard', icon: 'dashboard', path: '/' },
+  { type: 'section', label: 'CRM' },
   { label: 'Companies', icon: 'companies', path: '/companies' },
   { label: 'Kontakte', icon: 'contacts', path: '/contacts' },
   { label: 'Pipeline', icon: 'pipeline', path: '/pipeline' },
+  { type: 'section', label: 'Projekte' },
   { label: 'Projekte', icon: 'projects', path: '/projects' },
   { label: 'Websites', icon: 'websites', path: '/websites' },
   { label: 'Tasks', icon: 'tasks', path: '/tasks' },
-  { type: 'divider' },
+  { type: 'section', label: 'Marketing' },
   { label: 'Outreach', icon: 'outreach', path: '/outreach' },
   { label: 'Google Ads', icon: 'ads', path: '/ads' },
-  { type: 'divider' },
+  { type: 'section', label: 'System' },
   { label: 'SOPs', icon: 'sops', path: '/sops' },
   { label: 'Finanzen', icon: 'finances', path: '/finances' },
   { label: 'Notizen', icon: 'notes', path: '/notes' },
-  { type: 'divider' },
   { label: 'KI-Assistent', icon: 'ai', path: '/assistant' },
   { label: 'Settings', icon: 'settings', path: '/settings' },
 ];
@@ -357,14 +358,16 @@ const Sidebar = ({ collapsed, onToggle }) => {
   const isActive = (path) => path === '/' ? loc.pathname === '/' : loc.pathname.startsWith(path);
 
   return (
-    <aside style={{ width: collapsed ? 64 : 220, minHeight: '100vh', background: C.bgCard, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', transition: 'width 0.25s ease', overflow: 'hidden', flexShrink: 0 }}>
+    <aside style={{ width: collapsed ? 64 : 220, height: '100vh', background: C.bgCard, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', transition: 'width 0.25s ease', overflow: 'hidden', flexShrink: 0 }}>
       <div style={{ padding: collapsed ? '20px 12px' : '20px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={onToggle}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: font.head, fontSize: 18, fontWeight: 700, color: C.bg, flexShrink: 0 }}>E</div>
         {!collapsed && <span style={{ fontFamily: font.head, fontSize: 18, fontWeight: 600, color: C.text, letterSpacing: '0.05em' }}>ELEVO</span>}
       </div>
       <nav style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
         {NAV.map((item, i) => {
-          if (item.type === 'divider') return <div key={i} style={{ height: 1, background: C.border, margin: '8px 4px' }} />;
+          if (item.type === 'section') return !collapsed ? (
+            <div key={i} style={{ fontFamily: font.body, fontSize: 10, fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 12px 6px', marginTop: i > 0 ? 4 : 0 }}>{item.label}</div>
+          ) : <div key={i} style={{ height: 1, background: C.border, margin: '8px 4px' }} />;
           const active = isActive(item.path);
           return (
             <Link key={item.path} to={item.path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px 12px' : '8px 12px', borderRadius: 8, textDecoration: 'none', background: active ? C.goldDim : 'transparent', color: active ? C.gold : C.textDim, fontFamily: font.body, fontSize: 13, fontWeight: active ? 500 : 400, transition: 'all 0.15s', marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}>
@@ -381,13 +384,21 @@ const Sidebar = ({ collapsed, onToggle }) => {
   );
 };
 
-const Topbar = ({ onSearch }) => (
-  <header style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: C.bgCard }}>
-    <button onClick={onSearch} style={{ ...S.btn, ...S.btnGhost, fontSize: 12, color: C.textMuted, gap: 8 }}>
-      {React.cloneElement(Icons.search, { size: 14, color: C.textMuted })} Suche
-      <kbd style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted, background: C.bgHover, padding: '1px 5px', borderRadius: 3, border: `1px solid ${C.border}`, marginLeft: 4 }}>⌘K</kbd>
+const Topbar = ({ onSearch, overdueCount }) => (
+  <header style={{ height: 48, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: C.bgCard, flexShrink: 0 }}>
+    <button onClick={onSearch} style={{ ...S.btn, ...S.btnGhost, fontSize: 12, color: C.textMuted, gap: 8, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 14px' }}>
+      {React.cloneElement(Icons.search, { size: 14, color: C.textMuted })} Suche...
+      <kbd style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted, background: C.bg, padding: '1px 5px', borderRadius: 3, border: `1px solid ${C.border}`, marginLeft: 8 }}>⌘K</kbd>
     </button>
-    <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      {overdueCount > 0 && (
+        <Link to="/pipeline" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', padding: '4px 10px', borderRadius: 6, background: C.orangeDim }}>
+          {React.cloneElement(Icons.alert, { size: 14 })}
+          <span style={{ fontFamily: font.body, fontSize: 11, fontWeight: 600, color: C.orange }}>{overdueCount} Follow-up{overdueCount > 1 ? 's' : ''}</span>
+        </Link>
+      )}
+      <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date().toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+    </div>
   </header>
 );
 
@@ -545,49 +556,74 @@ const Dashboard = ({ data, helpers, actions }) => {
   const overdue = helpers.overdueFollowups();
   const openDeals = data.deals.filter(d => !['Gewonnen', 'Verloren'].includes(d.status));
   const openTasks = data.tasks.filter(t => !t.done);
-  const recentActs = [...data.activities].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  const recentActs = [...data.activities].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+  const nav = useNavigate();
+
+  // Conversion rate
+  const totalDeals = data.deals.length;
+  const wonDeals = data.deals.filter(d => d.status === 'Gewonnen').length;
+  const convRate = totalDeals > 0 ? Math.round((wonDeals / totalDeals) * 100) : 0;
+
+  // Tasks due today or overdue
+  const today = new Date().toISOString().slice(0, 10);
+  const urgentTasks = data.tasks.filter(t => !t.done && t.due && t.due <= today);
 
   return (
     <div style={S.page}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={S.pageTitle}>Command Center</h1>
-        <p style={S.pageSub}>Willkommen zurück. Hier ist dein Überblick.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h1 style={S.pageTitle}>Command Center</h1>
+          <p style={S.pageSub}>Willkommen zurück. Hier ist dein Überblick.</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => nav('/companies')} style={{ ...S.btn, ...S.btnGhost, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 13, color: C.textDim })} Firma</button>
+          <button onClick={() => nav('/pipeline')} style={{ ...S.btn, ...S.btnGold, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 13, color: C.bg })} Deal</button>
+        </div>
       </div>
 
       {overdue.length > 0 && (
-        <div style={{ ...S.card, background: C.orangeDim, borderColor: C.orange, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ ...S.card, background: C.orangeDim, borderColor: C.orange, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => nav('/pipeline')}>
           {Icons.alert}
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.orange }}>{overdue.length} überfällige Follow-up{overdue.length > 1 ? 's' : ''}</div>
             <div style={{ fontFamily: font.body, fontSize: 12, color: C.text, marginTop: 2 }}>
-              {overdue.map(d => d.title).join(', ')}
+              {overdue.slice(0, 3).map(d => d.title).join(', ')}{overdue.length > 3 ? ` +${overdue.length - 3} weitere` : ''}
             </div>
           </div>
+          {React.cloneElement(Icons.chevRight, { size: 16, color: C.orange })}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard label="Pipeline-Wert" value={`${helpers.pipelineValue().toLocaleString('de-DE')}€`} sub={`${openDeals.length} offene Deals`} />
-        <StatCard label="Gewonnen" value={`${helpers.wonValue().toLocaleString('de-DE')}€`} color={C.green} />
+        <StatCard label="Gewonnen" value={`${helpers.wonValue().toLocaleString('de-DE')}€`} sub={`${wonDeals} Deal${wonDeals !== 1 ? 's' : ''}`} color={C.green} />
+        <StatCard label="Conversion" value={`${convRate}%`} sub={`${wonDeals} von ${totalDeals}`} color={convRate >= 30 ? C.green : C.orange} />
         <StatCard label="Companies" value={data.companies.length} sub={`${data.contacts.length} Kontakte`} color={C.blue} />
-        <StatCard label="Offene Tasks" value={openTasks.length} sub={`von ${data.tasks.length} gesamt`} color={C.orange} />
+        <StatCard label="Offene Tasks" value={openTasks.length} sub={urgentTasks.length > 0 ? `${urgentTasks.length} überfällig` : 'alles im Plan'} color={urgentTasks.length > 0 ? C.orange : C.green} />
         <StatCard label="Fixkosten" value={`${data.finances.fixcosts.reduce((s, f) => s + f.amount, 0)}€`} sub="pro Monat" color={C.red} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={S.card}>
-          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Offene Deals</h3>
-          {openDeals.length === 0 ? <Empty text="Keine offenen Deals" /> : openDeals.map(d => {
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Offene Deals</h3>
+            <Link to="/pipeline" style={{ ...S.link, fontSize: 12 }}>Alle →</Link>
+          </div>
+          {openDeals.length === 0 ? <Empty text="Keine offenen Deals" /> : openDeals.slice(0, 5).map(d => {
             const comp = helpers.getCompany(d.companyId);
+            const isOd = d.followUp && new Date(d.followUp) < new Date();
             return (
               <Link key={d.id} to={`/deals/${d.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}`, textDecoration: 'none' }}>
                 <div>
                   <div style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{d.title}</div>
-                  <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
+                  <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name} • {d.service}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</div>
-                  {statusBadge(d.status)}
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', marginTop: 2 }}>
+                    {statusBadge(d.status)}
+                    {isOd && <Badge variant="orange">!</Badge>}
+                  </div>
                 </div>
               </Link>
             );
@@ -595,45 +631,67 @@ const Dashboard = ({ data, helpers, actions }) => {
         </div>
 
         <div style={S.card}>
-          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Letzte Aktivitäten</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Letzte Aktivitäten</h3>
+            <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{data.activities.length} gesamt</span>
+          </div>
           {recentActs.length === 0 ? <Empty text="Keine Aktivitäten" /> :
             recentActs.map(a => {
               const comp = helpers.getCompany(a.companyId);
               return (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
-                  <div>
-                    <div style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{a.subject}</div>
-                    <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <Badge variant={a.type === 'E-Mail' ? 'blue' : a.type === 'Anruf' ? 'green' : a.type === 'Meeting' ? 'purple' : 'default'}>{a.type}</Badge>
+                    <div>
+                      <div style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{a.subject}</div>
+                      <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <Badge>{a.type}</Badge>
-                    <div style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted, marginTop: 2 }}>{new Date(a.date).toLocaleDateString('de-DE')}</div>
-                  </div>
+                  <span style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted }}>{new Date(a.date).toLocaleDateString('de-DE')}</span>
                 </div>
               );
             })}
         </div>
       </div>
 
-      <div style={{ ...S.card, marginTop: 20 }}>
-        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Projekte</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
-          {data.projects.map(p => {
-            const comp = helpers.getCompany(p.companyId);
-            return (
-              <div key={p.id} style={{ ...S.card, padding: 14 }}>
-                <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{p.name}</div>
-                <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, marginBottom: 8 }}>{comp?.name} • {p.deadline && `Deadline: ${new Date(p.deadline).toLocaleDateString('de-DE')}`}</div>
-                <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2, transition: 'width 0.3s' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginTop: 16 }}>
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Projekte</h3>
+            <Link to="/projects" style={{ ...S.link, fontSize: 12 }}>Alle →</Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            {data.projects.map(p => {
+              const comp = helpers.getCompany(p.companyId);
+              return (
+                <div key={p.id} style={{ padding: 12, background: C.bgHover, borderRadius: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontFamily: font.body, fontSize: 12, fontWeight: 500, color: C.text }}>{p.name}</span>
+                    {statusBadge(p.status)}
+                  </div>
+                  <div style={{ height: 3, background: C.border, borderRadius: 2 }}>
+                    <div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2, transition: 'width 0.3s' }} />
+                  </div>
+                  <div style={{ fontFamily: font.body, fontSize: 10, color: C.textDim, marginTop: 4 }}>{comp?.name} • {p.progress}%</div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span style={{ fontFamily: font.body, fontSize: 10, color: C.textDim }}>{p.progress}%</span>
-                  {statusBadge(p.status)}
-                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Fällige Tasks</h3>
+            <Link to="/tasks" style={{ ...S.link, fontSize: 12 }}>Alle →</Link>
+          </div>
+          {urgentTasks.length === 0 && openTasks.length === 0 ? <Empty text="Keine Tasks" /> :
+            (urgentTasks.length > 0 ? urgentTasks : openTasks).slice(0, 5).map(t => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                <button onClick={() => actions.toggleTask(t.id)} style={{ width: 16, height: 16, borderRadius: 3, border: `1.5px solid ${t.done ? C.green : C.border}`, background: t.done ? C.greenDim : 'transparent', cursor: 'pointer', flexShrink: 0 }} />
+                <span style={{ fontFamily: font.body, fontSize: 12, color: C.text, flex: 1 }}>{t.text}</span>
+                <Badge variant={t.priority === 'hoch' ? 'red' : 'orange'}>{t.priority}</Badge>
               </div>
-            );
-          })}
+            ))}
         </div>
       </div>
     </div>
@@ -726,11 +784,14 @@ const Companies = ({ data, helpers, actions }) => {
 // ============================================================================
 const CompanyDetail = ({ data, helpers, actions }) => {
   const { id } = useParams();
+  const nav = useNavigate();
   const company = helpers.getCompany(id);
   const [tab, setTab] = useState('Übersicht');
   const [logOpen, setLogOpen] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddDeal, setShowAddDeal] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({});
   const [ctForm, setCtForm] = useState({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '' });
   const [dlForm, setDlForm] = useState({ title: '', contactId: '', status: 'Lead', service: 'Website', volume: '', source: '', followUp: '', notes: '' });
 
@@ -742,6 +803,10 @@ const CompanyDetail = ({ data, helpers, actions }) => {
   const websites = helpers.companyWebsites(id);
   const activities = helpers.companyActivities(id);
   const tasks = helpers.companyTasks(id);
+
+  const openEdit = () => { setEditForm({ ...company }); setShowEdit(true); };
+  const saveEdit = () => { actions.updateCompany(id, editForm); setShowEdit(false); };
+  const handleDelete = () => { if (confirm(`"${company.name}" und alle verknüpften Daten löschen?`)) { actions.deleteCompany(id); nav('/companies'); } };
 
   const saveContact = () => {
     if (!ctForm.firstName.trim()) return;
@@ -767,7 +832,10 @@ const CompanyDetail = ({ data, helpers, actions }) => {
             {company.source && <Badge variant="purple">{company.source}</Badge>}
           </div>
         </div>
-        <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
+          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
@@ -885,6 +953,26 @@ const CompanyDetail = ({ data, helpers, actions }) => {
           <button onClick={saveDeal} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
         </div>
       </Modal>
+
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Firma bearbeiten" width={520}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Firmenname"><input style={S.input} value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="Branche"><input style={S.input} value={editForm.industry || ''} onChange={e => setEditForm(f => ({ ...f, industry: e.target.value }))} /></FormRow>
+          <FormRow label="Website"><input style={S.input} value={editForm.website || ''} onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={editForm.email || ''} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={editForm.phone || ''} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} /></FormRow>
+          <FormRow label="Ort"><input style={S.input} value={editForm.address || ''} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} /></FormRow>
+          <FormRow label="Größe"><select style={S.select} value={editForm.size || ''} onChange={e => setEditForm(f => ({ ...f, size: e.target.value }))}><option value="">–</option><option>Klein</option><option>KMU</option><option>Mittelstand</option><option>Groß</option></select></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={editForm.source || ''} onChange={e => setEditForm(f => ({ ...f, source: e.target.value }))}><option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Referenz</option><option>Direkt</option></select></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+          <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -894,15 +982,25 @@ const CompanyDetail = ({ data, helpers, actions }) => {
 // ============================================================================
 const Contacts = ({ data, helpers, actions }) => {
   const [search, setSearch] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [ctForm, setCtForm] = useState({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '', companyId: '' });
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return data.contacts.filter(c => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.position?.toLowerCase().includes(q));
   }, [data.contacts, search]);
 
+  const saveContact = () => {
+    if (!ctForm.firstName.trim() || !ctForm.companyId) return;
+    actions.addContact({ ...ctForm, tags: [] });
+    setShowAdd(false); setCtForm({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '', companyId: '' });
+  };
+
   return (
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Kontakte</h1><p style={S.pageSub}>{data.contacts.length} Kontakte</p></div>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Kontakt</button>
       </div>
       <div style={{ marginBottom: 16 }}><input style={{ ...S.input, maxWidth: 320 }} placeholder="Kontakte durchsuchen..." value={search} onChange={e => setSearch(e.target.value)} /></div>
       <div style={S.card}>
@@ -925,6 +1023,31 @@ const Contacts = ({ data, helpers, actions }) => {
         </table>
         {filtered.length === 0 && <Empty text="Keine Kontakte gefunden" />}
       </div>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Neuer Kontakt">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Firma *">
+            <select style={S.select} value={ctForm.companyId} onChange={e => setCtForm(f => ({ ...f, companyId: e.target.value }))}>
+              <option value="">– Firma wählen –</option>
+              {data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Position"><input style={S.input} value={ctForm.position} onChange={e => setCtForm(f => ({ ...f, position: e.target.value }))} placeholder="z.B. Geschäftsführer" /></FormRow>
+          <FormRow label="Vorname *"><input style={S.input} value={ctForm.firstName} onChange={e => setCtForm(f => ({ ...f, firstName: e.target.value }))} /></FormRow>
+          <FormRow label="Nachname"><input style={S.input} value={ctForm.lastName} onChange={e => setCtForm(f => ({ ...f, lastName: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={ctForm.email} onChange={e => setCtForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={ctForm.phone} onChange={e => setCtForm(f => ({ ...f, phone: e.target.value }))} /></FormRow>
+        </div>
+        <FormRow label="Quelle">
+          <select style={S.select} value={ctForm.source} onChange={e => setCtForm(f => ({ ...f, source: e.target.value }))}>
+            <option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Direkt</option>
+          </select>
+        </FormRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveContact} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -934,8 +1057,11 @@ const Contacts = ({ data, helpers, actions }) => {
 // ============================================================================
 const ContactDetail = ({ data, helpers, actions }) => {
   const { id } = useParams();
+  const nav = useNavigate();
   const contact = helpers.getContact(id);
   const [logOpen, setLogOpen] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   if (!contact) return <div style={S.page}><BackButton to="/contacts" /><Empty text="Kontakt nicht gefunden" /></div>;
 
@@ -943,36 +1069,62 @@ const ContactDetail = ({ data, helpers, actions }) => {
   const deals = helpers.contactDeals(id);
   const activities = helpers.contactActivities(id);
 
+  const openEdit = () => { setEditForm({ ...contact }); setShowEdit(true); };
+  const saveEdit = () => { actions.updateContact(id, editForm); setShowEdit(false); };
+  const handleDelete = () => { if (confirm(`"${contact.firstName} ${contact.lastName}" löschen?`)) { actions.deleteContact(id); nav('/contacts'); } };
+
   return (
     <div style={S.page}>
       <BackButton to="/contacts" label="Zurück zu Kontakte" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={S.pageTitle}>{contact.firstName} {contact.lastName}</h1>
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
             {contact.position && <Badge>{contact.position}</Badge>}
             {company && <Link to={`/companies/${company.id}`} style={{ textDecoration: 'none' }}><Badge variant="blue">{company.name}</Badge></Link>}
           </div>
         </div>
-        <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
+          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+        </div>
+      </div>
+
+      {/* Quick Log Buttons */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {[['Anruf', Icons.phone, C.green], ['E-Mail', Icons.mail, C.blue], ['Loom', Icons.video, C.purple], ['Meeting', Icons.calendar, C.orange]].map(([type, icon, col]) => (
+          <button key={type} onClick={() => { actions.addActivity({ companyId: contact.companyId, contactId: id, dealId: null, type, subject: `${type} geloggt`, content: `Schnell-Log: ${type} mit ${contact.firstName} ${contact.lastName}` }); }} style={{ ...S.btn, ...S.btnGhost, borderColor: col, color: col }}>
+            {React.cloneElement(icon, { size: 14, color: col })} {type}
+          </button>
+        ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <div style={S.card}>
-          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Details</h3>
-          {[['E-Mail', contact.email], ['Telefon', contact.phone], ['Quelle', contact.source], ['Letzter Kontakt', contact.lastContact && new Date(contact.lastContact).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
-            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l}</span>
-              <span style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{v}</span>
-            </div>
-          ) : null)}
-          <h4 style={{ fontFamily: font.head, fontSize: 16, color: C.text, margin: '16px 0 10px' }}>Deals</h4>
-          {deals.length === 0 ? <Empty text="Keine Deals" /> : deals.map(d => (
-            <Link key={d.id} to={`/deals/${d.id}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}`, textDecoration: 'none' }}>
-              <span style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{d.title}</span>
-              <span style={{ fontFamily: font.body, fontSize: 13, color: C.gold, fontWeight: 500 }}>{d.volume?.toLocaleString('de-DE')}€</span>
-            </Link>
-          ))}
+        <div>
+          <div style={{ ...S.card, marginBottom: 16 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Details</h3>
+            {[['E-Mail', contact.email], ['Telefon', contact.phone], ['Firma', company?.name], ['Quelle', contact.source], ['Letzter Kontakt', contact.lastContact && new Date(contact.lastContact).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l}</span>
+                <span style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{v}</span>
+              </div>
+            ) : null)}
+          </div>
+          <div style={S.card}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Deals</h3>
+            {deals.length === 0 ? <Empty text="Keine Deals" /> : deals.map(d => (
+              <Link key={d.id} to={`/deals/${d.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}`, textDecoration: 'none' }}>
+                <div>
+                  <div style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{d.title}</div>
+                  <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{d.service}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: font.body, fontSize: 13, color: C.gold, fontWeight: 500 }}>{d.volume?.toLocaleString('de-DE')}€</div>
+                  {statusBadge(d.status)}
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
         <div style={S.card}>
           <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Aktivitäten</h3>
@@ -981,6 +1133,28 @@ const ContactDetail = ({ data, helpers, actions }) => {
       </div>
 
       <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={contact.companyId} contactId={id} deals={deals} actions={actions} />
+
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Kontakt bearbeiten" width={520}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Vorname"><input style={S.input} value={editForm.firstName || ''} onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))} /></FormRow>
+          <FormRow label="Nachname"><input style={S.input} value={editForm.lastName || ''} onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={editForm.email || ''} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={editForm.phone || ''} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} /></FormRow>
+          <FormRow label="Position"><input style={S.input} value={editForm.position || ''} onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))} /></FormRow>
+          <FormRow label="Firma">
+            <select style={S.select} value={editForm.companyId || ''} onChange={e => setEditForm(f => ({ ...f, companyId: e.target.value }))}>
+              <option value="">–</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+          <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -1076,19 +1250,37 @@ const Pipeline = ({ data, helpers, actions }) => {
 // ============================================================================
 const DealDetail = ({ data, helpers, actions }) => {
   const { id } = useParams();
+  const nav = useNavigate();
   const deal = helpers.getDeal(id);
   const [logOpen, setLogOpen] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   if (!deal) return <div style={S.page}><BackButton to="/pipeline" /><Empty text="Deal nicht gefunden" /></div>;
 
   const company = helpers.getCompany(deal.companyId);
   const contact = helpers.getContact(deal.contactId);
   const activities = helpers.dealActivities(id);
+  const companyContacts = company ? helpers.companyContacts(company.id) : [];
 
   const changeStage = (stage) => {
     actions.updateDeal(id, { status: stage });
     actions.addActivity({ companyId: deal.companyId, contactId: deal.contactId, dealId: id, type: 'Notiz', subject: `Stage → ${stage}`, content: `Deal wurde auf "${stage}" verschoben.` });
+    // Auto-create project when deal is won
+    if (stage === 'Gewonnen') {
+      const existingProject = data.projects.find(p => p.dealId === id);
+      if (!existingProject) {
+        actions.addProject({ companyId: deal.companyId, dealId: id, name: `${deal.service || 'Projekt'}: ${deal.title}`, status: 'Planung', progress: 0, deadline: '', notes: `Aus Deal "${deal.title}" erstellt.` });
+        actions.addActivity({ companyId: deal.companyId, contactId: deal.contactId, dealId: id, type: 'Notiz', subject: 'Projekt erstellt', content: `Projekt automatisch aus gewonnenem Deal erstellt.` });
+      }
+    }
   };
+
+  const openEdit = () => { setEditForm({ ...deal }); setShowEdit(true); };
+  const saveEdit = () => { actions.updateDeal(id, editForm); setShowEdit(false); };
+  const handleDelete = () => { if (confirm(`Deal "${deal.title}" löschen?`)) { actions.deleteDeal(id); nav('/pipeline'); } };
+
+  const isOverdue = deal.followUp && new Date(deal.followUp) < new Date() && !['Gewonnen', 'Verloren'].includes(deal.status);
 
   return (
     <div style={S.page}>
@@ -1096,19 +1288,21 @@ const DealDetail = ({ data, helpers, actions }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={S.pageTitle}>{deal.title}</h1>
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {company && <Link to={`/companies/${company.id}`} style={{ textDecoration: 'none' }}><Badge>{company.name}</Badge></Link>}
             {contact && <Link to={`/contacts/${contact.id}`} style={{ textDecoration: 'none' }}><Badge variant="blue">{contact.firstName} {contact.lastName}</Badge></Link>}
             <Badge variant="green">{deal.volume?.toLocaleString('de-DE')}€</Badge>
+            {isOverdue && <Badge variant="orange">Follow-up überfällig</Badge>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
           <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
         </div>
       </div>
 
       {/* Stage Progress Bar */}
-      <div style={{ ...S.card, marginBottom: 24, padding: '16px 20px' }}>
+      <div style={{ ...S.card, marginBottom: 20, padding: '16px 20px' }}>
         <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Deal-Stage</div>
         <div style={{ display: 'flex', gap: 4 }}>
           {DEAL_STAGES.map(stage => {
@@ -1126,7 +1320,7 @@ const DealDetail = ({ data, helpers, actions }) => {
       </div>
 
       {/* Quick Log Buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {[['Anruf', Icons.phone, C.green], ['E-Mail', Icons.mail, C.blue], ['Loom', Icons.video, C.purple], ['Meeting', Icons.calendar, C.orange]].map(([type, icon, col]) => (
           <button key={type} onClick={() => { actions.addActivity({ companyId: deal.companyId, contactId: deal.contactId, dealId: id, type, subject: `${type} geloggt`, content: `Schnell-Log: ${type}` }); }} style={{ ...S.btn, ...S.btnGhost, borderColor: col, color: col }}>
             {React.cloneElement(icon, { size: 14, color: col })} {type}
@@ -1137,13 +1331,18 @@ const DealDetail = ({ data, helpers, actions }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div style={S.card}>
           <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Details</h3>
-          {[['Service', deal.service], ['Quelle', deal.source], ['Follow-up', deal.followUp && new Date(deal.followUp).toLocaleDateString('de-DE')], ['Erstellt', deal.created && new Date(deal.created).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
-            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+          {[['Service', deal.service], ['Volumen', deal.volume ? `${deal.volume.toLocaleString('de-DE')}€` : null], ['Quelle', deal.source], ['Follow-up', deal.followUp && new Date(deal.followUp).toLocaleDateString('de-DE')], ['Erstellt', deal.created && new Date(deal.created).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
               <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l}</span>
-              <span style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{v}</span>
+              <span style={{ fontFamily: font.body, fontSize: 12, color: l === 'Follow-up' && isOverdue ? C.orange : C.text, fontWeight: l === 'Follow-up' && isOverdue ? 600 : 400 }}>{v}</span>
             </div>
           ) : null)}
-          {deal.notes && <div style={{ marginTop: 12, fontFamily: font.body, fontSize: 12, color: C.textDim, padding: 10, background: C.bgHover, borderRadius: 6 }}>{deal.notes}</div>}
+          {deal.notes && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Notizen</div>
+              <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, padding: 10, background: C.bgHover, borderRadius: 6, whiteSpace: 'pre-wrap' }}>{deal.notes}</div>
+            </div>
+          )}
         </div>
         <div style={S.card}>
           <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Aktivitäten</h3>
@@ -1151,7 +1350,33 @@ const DealDetail = ({ data, helpers, actions }) => {
         </div>
       </div>
 
-      <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={deal.companyId} contactId={deal.contactId} dealId={id} contacts={company ? helpers.companyContacts(company.id) : []} deals={[deal]} actions={actions} />
+      <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={deal.companyId} contactId={deal.contactId} dealId={id} contacts={companyContacts} deals={[deal]} actions={actions} />
+
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Deal bearbeiten" width={520}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Deal-Titel"><input style={S.input} value={editForm.title || ''} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} /></FormRow>
+          <FormRow label="Kontakt">
+            <select style={S.select} value={editForm.contactId || ''} onChange={e => setEditForm(f => ({ ...f, contactId: e.target.value }))}>
+              <option value="">–</option>{companyContacts.map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Service"><select style={S.select} value={editForm.service || ''} onChange={e => setEditForm(f => ({ ...f, service: e.target.value }))}>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></FormRow>
+          <FormRow label="Volumen (€)"><input style={S.input} type="number" value={editForm.volume || ''} onChange={e => setEditForm(f => ({ ...f, volume: Number(e.target.value) || 0 }))} /></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={editForm.source || ''} onChange={e => setEditForm(f => ({ ...f, source: e.target.value }))}><option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Direkt</option></select></FormRow>
+          <FormRow label="Follow-up"><input style={S.input} type="date" value={editForm.followUp || ''} onChange={e => setEditForm(f => ({ ...f, followUp: e.target.value }))} /></FormRow>
+        </div>
+        <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 60, resize: 'vertical' }} value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+          <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};
     </div>
   );
 };
@@ -1407,7 +1632,7 @@ const Notes = ({ data, actions }) => {
   );
 };
 
-const Assistant = ({ data, actions }) => {
+const Assistant = ({ data, helpers, actions }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1420,7 +1645,7 @@ const Assistant = ({ data, actions }) => {
     setInput('');
     setLoading(true);
     try {
-      const context = `Du bist der ELEVO KI-Assistent. Kontext: ${data.companies.length} Firmen, ${data.contacts.length} Kontakte, ${data.deals.length} Deals (Pipeline: ${helpers?.pipelineValue?.() || 0}€), ${data.tasks.filter(t=>!t.done).length} offene Tasks. Antworte kurz und auf Deutsch.`;
+      const context = `Du bist der ELEVO KI-Assistent. Kontext: ${data.companies.length} Firmen, ${data.contacts.length} Kontakte, ${data.deals.length} Deals (Pipeline: ${helpers.pipelineValue()}€), ${data.tasks.filter(t=>!t.done).length} offene Tasks. Antworte kurz und auf Deutsch.`;
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': data.settings.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -1508,11 +1733,11 @@ export default function App() {
   const props = { data, helpers, actions };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: font.body, color: C.text }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100vw', background: C.bg, fontFamily: font.body, color: C.text, overflow: 'hidden', position: 'fixed', top: 0, left: 0 }}>
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Topbar onSearch={() => setSearchOpen(true)} />
-        <main style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
+        <Topbar onSearch={() => setSearchOpen(true)} overdueCount={helpers.overdueFollowups().length} />
+        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           <Routes>
             <Route path="/" element={<Dashboard {...props} />} />
             <Route path="/companies" element={<Companies {...props} />} />
