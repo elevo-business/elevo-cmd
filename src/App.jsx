@@ -1,1007 +1,1540 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { Routes, Route, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 
-/* ═══════════════════════════════════════════════════════════════════════
-   E L E V O  —  COMMAND CENTER v6.1  ·  Production Build
-   ═══════════════════════════════════════════════════════════════════════
-   Module: Dashboard · Pipeline · Kontakte · Cold Outreach · Google Ads
-           Projekte · Websites · Tasks · SOPs · Finanzen · Notizen · Settings
-   ═══════════════════════════════════════════════════════════════════════ */
-
-const C={bg:"#0A0A0C",panel:"#111113",card:"#19191D",cardH:"#1F1F24",border:"#2A2A30",borderL:"#35353D",accent:"#D4A853",accentH:"#E8C97A",accentDim:"#D4A85315",accentSoft:"#D4A85330",white:"#F4F4F5",off:"#A1A1AA",muted:"#71717A",dim:"#3F3F46",green:"#34D399",red:"#FB7185",blue:"#60A5FA",orange:"#FBBF24",purple:"#A78BFA",cyan:"#22D3EE"};
-
-const STAGES=["Lead","Erstgespräch","Angebot","Verhandlung","Gewonnen"];
-const STAGE_C={Lead:C.blue,"Erstgespräch":C.orange,Angebot:C.accent,Verhandlung:C.purple,Gewonnen:C.green,Verloren:C.red,Pausiert:C.muted};
-const PROJ_C={Planung:C.blue,"In Arbeit":C.accent,Review:C.orange,Abgeschlossen:C.green,Pausiert:C.muted};
-const WEB_C={Live:C.green,Entwicklung:C.blue,Wartung:C.orange,Offline:C.red,Entwurf:C.muted};
-
-const eur=v=>new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(v||0);
-const pct=v=>`${Math.round(v||0)}%`;
-const fdt=d=>d?new Date(d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):"–";
-const fdtLong=d=>d?new Date(d).toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"}):"–";
-const nid=()=>Date.now()+Math.random()*1000|0;
-
-/* ═══ INITIAL DATA ═══ */
-const INIT={
-  pin:"",
-  pipeline:[{id:1,company:"Beispiel GmbH",contact:"Max Mustermann",email:"max@beispiel.de",phone:"0171 1234567",source:"Empfehlung",status:"Lead",service:"Website",volume:1500,followUp:"2026-03-22",notes:"Erstkontakt über Netzwerk",created:"2026-03-16"}],
-  contacts:[{id:1,firstName:"Max",lastName:"Mustermann",company:"Beispiel GmbH",email:"max@beispiel.de",phone:"0171 1234567",source:"Netzwerk",tags:["KMU"],lastContact:"2026-03-15",notes:""}],
-  projects:[
-    {id:1,name:"Website Bar Lighthouse",client:"Bar Lighthouse",status:"In Arbeit",deadline:"2026-03-19",progress:75,notes:"Referenz-Website #1"},
-    {id:2,name:"Website Ristorante Luigi",client:"Ristorante Luigi",status:"In Arbeit",deadline:"2026-03-19",progress:60,notes:"Referenz-Website #2"},
-    {id:3,name:"Website Heilpraxis Weber",client:"Heilpraxis Weber",status:"Planung",deadline:"2026-03-19",progress:30,notes:"Referenz-Website #3 (Remote)"},
-  ],
-  websites:[
-    {id:1,name:"Bar Lighthouse",url:"lighthouse-bar.de",status:"Entwicklung",hosting:"Hetzner/Coolify",footerLink:true},
-    {id:2,name:"Ristorante Luigi",url:"ristorante-luigi.de",status:"Entwicklung",hosting:"Hetzner/Coolify",footerLink:true},
-    {id:3,name:"Heilpraxis Weber",url:"heilpraxis-weber.de",status:"Entwicklung",hosting:"Hetzner/Coolify",footerLink:true},
-  ],
-  outreach:{
-    domains:[
-      {id:1,domain:"elevo-digital.de",provider:"Google Workspace",status:"Nicht eingerichtet",warmupDay:0,warmupTarget:21,dns:{spf:false,dkim:false,dmarc:false},mailboxes:[{email:"hey@elevo-digital.de",health:0,dailyLimit:0,sent:0},{email:"info@elevo-digital.de",health:0,dailyLimit:0,sent:0}]},
-      {id:2,domain:"elevo-aachen.de",provider:"Google Workspace",status:"Nicht eingerichtet",warmupDay:0,warmupTarget:21,dns:{spf:false,dkim:false,dmarc:false},mailboxes:[{email:"hey@elevo-aachen.de",health:0,dailyLimit:0,sent:0},{email:"info@elevo-aachen.de",health:0,dailyLimit:0,sent:0}]},
-      {id:3,domain:"elevo-web.de",provider:"Google Workspace",status:"Nicht eingerichtet",warmupDay:0,warmupTarget:21,dns:{spf:false,dkim:false,dmarc:false},mailboxes:[{email:"hey@elevo-web.de",health:0,dailyLimit:0,sent:0},{email:"info@elevo-web.de",health:0,dailyLimit:0,sent:0}]},
-    ],
-    sequences:[
-      {id:1,name:"Webdesign Cold Outreach",status:"Entwurf",delay:"3-5 Tage",emails:[
-        {step:1,subject:"Kurze Frage zu {company}",body:"Hi {firstName},\n\nich habe mir die Website von {company} angeschaut und mir sind ein paar Dinge aufgefallen, die euch Kunden kosten könnten.\n\nIch habe 2-3 konkrete Verbesserungen identifiziert – darf ich sie dir kurz zeigen?\n\nBeste Grüße"},
-        {step:2,subject:"Nochmal kurz – {company}",body:"Hi {firstName},\n\nwollte nur sichergehen, dass meine letzte Nachricht nicht untergegangen ist.\n\nKurz zusammengefasst: Ich sehe konkretes Potenzial bei eurem Online-Auftritt und würde dir gerne in 5 Minuten zeigen, was ich meine.\n\nKein Verkaufsgespräch, nur ein kurzer Impuls.\n\nBeste Grüße"},
-        {step:3,subject:"Letzte Nachricht – {company}",body:"Hi {firstName},\n\nich melde mich nicht nochmal. Falls der Zeitpunkt gerade nicht passt, kein Problem.\n\nFalls du irgendwann eure digitale Präsenz anpacken willst – hier ist mein Kalender: [LINK]\n\nAlles Gute!"},
-      ]},
-    ],
-    contactLists:[
-      {id:1,name:"Gastro Aachen",count:0,source:"Outscraper",created:"2026-03-16",status:"Leer"},
-      {id:2,name:"Handwerker Aachen",count:0,source:"Outscraper",created:"2026-03-16",status:"Leer"},
-      {id:3,name:"Praxen & Studios Aachen",count:0,source:"Outscraper",created:"2026-03-16",status:"Leer"},
-      {id:4,name:"Friseure & Beauty Aachen",count:0,source:"Outscraper",created:"2026-03-16",status:"Leer"},
-    ],
-    stats:{totalSent:0,opened:0,replied:0,bounced:0,leads:0},
-    looms:{sent:0,viewed:0,replied:0,avgLength:"0:00"},
-  },
-  ads:{
-    budget:150,spent:0,
-    campaigns:[
-      {id:1,name:"Website erstellen Aachen",status:"Entwurf",type:"Search",budget:75,spent:0,impressions:0,clicks:0,ctr:0,cpc:0,conversions:0,keywords:[
-        {keyword:"website erstellen lassen aachen",matchType:"Phrase",bid:4.5,impressions:0,clicks:0},
-        {keyword:"webdesign agentur aachen",matchType:"Phrase",bid:5.0,impressions:0,clicks:0},
-        {keyword:"homepage erstellen aachen",matchType:"Phrase",bid:3.8,impressions:0,clicks:0},
-        {keyword:"webdesigner aachen",matchType:"Exact",bid:5.5,impressions:0,clicks:0},
-        {keyword:"professionelle website kosten",matchType:"Broad",bid:3.0,impressions:0,clicks:0},
-      ]},
-      {id:2,name:"Digitalisierung KMU",status:"Entwurf",type:"Search",budget:75,spent:0,impressions:0,clicks:0,ctr:0,cpc:0,conversions:0,keywords:[
-        {keyword:"digitalisierung kleinunternehmen",matchType:"Phrase",bid:3.2,impressions:0,clicks:0},
-        {keyword:"digitale transformation mittelstand aachen",matchType:"Phrase",bid:4.0,impressions:0,clicks:0},
-        {keyword:"online präsenz verbessern",matchType:"Broad",bid:2.8,impressions:0,clicks:0},
-        {keyword:"firma website erstellen lassen",matchType:"Phrase",bid:4.2,impressions:0,clicks:0},
-      ]},
-    ],
-    settings:{region:"Aachen + 30km Umkreis",excluded:"Geilenkirchen",schedule:"Mo-Fr 7:00-20:00",startDate:""},
-    negativeKeywords:["kostenlos","gratis","selber machen","template","baukasten","wix","jimdo","wordpress theme"],
-  },
-  tasks:[
-    {id:1,text:"Domains kaufen (elevo-digital.de, elevo-aachen.de, elevo-web.de)",done:false,priority:"Hoch",category:"Outreach",due:"2026-03-16"},
-    {id:2,text:"Google Workspace einrichten (6 Postfächer)",done:false,priority:"Hoch",category:"Outreach",due:"2026-03-16"},
-    {id:3,text:"DNS-Einträge setzen (SPF, DKIM, DMARC) in Cloudflare",done:false,priority:"Hoch",category:"Outreach",due:"2026-03-16"},
-    {id:4,text:"Instantly.ai Account anlegen + Warmup starten",done:false,priority:"Hoch",category:"Outreach",due:"2026-03-16"},
-    {id:5,text:"Outscraper Account anlegen + erste Kontakte ziehen",done:false,priority:"Mittel",category:"Outreach",due:"2026-03-17"},
-    {id:6,text:"Website Bar Lighthouse fertigstellen & ausliefern",done:false,priority:"Hoch",category:"Projekte",due:"2026-03-19"},
-    {id:7,text:"Website Ristorante Luigi fertigstellen & ausliefern",done:false,priority:"Hoch",category:"Projekte",due:"2026-03-19"},
-    {id:8,text:"Website Heilpraxis Weber fertigstellen & ausliefern",done:false,priority:"Hoch",category:"Projekte",due:"2026-03-19"},
-    {id:9,text:"Google Ads Konto einrichten",done:false,priority:"Mittel",category:"Ads",due:"2026-03-18"},
-    {id:10,text:"Google Ads Keywords & Anzeigentexte erstellen",done:false,priority:"Mittel",category:"Ads",due:"2026-03-19"},
-    {id:11,text:"Google Ads Kampagnen live schalten",done:false,priority:"Mittel",category:"Ads",due:"2026-03-20"},
-    {id:12,text:"E-Mail-Vorlagen für Cold Outreach finalisieren",done:false,priority:"Mittel",category:"Outreach",due:"2026-03-20"},
-    {id:13,text:"Loom-Routine & Skript festlegen",done:false,priority:"Niedrig",category:"Outreach",due:"2026-03-21"},
-    {id:14,text:"Erste 5-10 Looms an Top-Prospects senden",done:false,priority:"Mittel",category:"Outreach",due:"2026-03-19"},
-    {id:15,text:"'Website by ELEVO' Footer-Link in alle 3 Referenz-Sites einbauen",done:false,priority:"Niedrig",category:"Projekte",due:"2026-03-19"},
-    {id:16,text:"Loom Account einrichten",done:false,priority:"Niedrig",category:"Outreach",due:"2026-03-17"},
-    {id:17,text:"Empfehlungs-Briefing an 3 Referenzkunden formulieren",done:false,priority:"Mittel",category:"Vertrieb",due:"2026-03-20"},
-  ],
-  sops:[
-    {id:1,name:"Neuer Lead – Erstansprache",category:"Vertrieb",steps:[
-      {id:1,text:"Website des Leads analysieren (Mobile, Speed, Design, SEO)",done:false},
-      {id:2,text:"2-3 konkrete Verbesserungspunkte identifizieren",done:false},
-      {id:3,text:"Entscheiden: Cold Mail oder Loom?",done:false},
-      {id:4,text:"Personalisierte Nachricht / Loom versenden",done:false},
-      {id:5,text:"Kontakt im CRM anlegen + Follow-up Datum setzen",done:false},
-      {id:6,text:"Nach 3-5 Tagen Follow-up wenn keine Antwort",done:false},
-    ]},
-    {id:2,name:"Website-Projekt – Ablauf",category:"Delivery",steps:[
-      {id:1,text:"Erstgespräch: Bedarf, Ziele, Branche, Konkurrenz klären",done:false},
-      {id:2,text:"Angebot erstellen und versenden",done:false},
-      {id:3,text:"50% Anzahlung einholen",done:false},
-      {id:4,text:"Content & Bilder vom Kunden einfordern",done:false},
-      {id:5,text:"Design-Entwurf erstellen + Feedback einholen",done:false},
-      {id:6,text:"Website entwickeln (Responsive, SEO-Basics, Speed)",done:false},
-      {id:7,text:"Kunde-Review + Korrekturrunde",done:false},
-      {id:8,text:"Go-Live + DNS umstellen",done:false},
-      {id:9,text:"50% Restzahlung einholen",done:false},
-      {id:10,text:"'Website by ELEVO' Footer-Link einbauen",done:false},
-      {id:11,text:"Empfehlungs-Briefing an Kunden geben",done:false},
-    ]},
-    {id:3,name:"Wöchentliche Review",category:"Operations",steps:[
-      {id:1,text:"Pipeline durchgehen – offene Deals prüfen + Follow-ups",done:false},
-      {id:2,text:"Outreach-Stats checken (Öffnungsrate, Antworten, Leads)",done:false},
-      {id:3,text:"Google Ads Performance prüfen (CTR, CPC, Conversions)",done:false},
-      {id:4,text:"Finanzen: Einnahmen vs. Ausgaben",done:false},
-      {id:5,text:"Tasks für nächste Woche planen",done:false},
-      {id:6,text:"Kontaktlisten auffüllen wenn < 100 unberührt",done:false},
-    ]},
-    {id:4,name:"Tägliche Outreach-Routine",category:"Outreach",steps:[
-      {id:1,text:"Instantly Dashboard checken – Antworten bearbeiten",done:false},
-      {id:2,text:"5-10 Top-Prospects identifizieren für Looms",done:false},
-      {id:3,text:"Looms aufnehmen und versenden",done:false},
-      {id:4,text:"Neue Leads in Pipeline eintragen",done:false},
-      {id:5,text:"Follow-ups für heute abarbeiten",done:false},
-    ]},
-  ],
-  finances:{monthly:{ads:150,workspace:36,instantly:28,domains:2,outscraper:25,loom:0},revenue:0,invoices:[]},
-  notes:[],
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+const C = {
+  bg: '#0A0A0C', bgCard: '#111114', bgHover: '#1a1a1f', bgInput: '#0d0d10',
+  border: '#1e1e24', borderLight: '#2a2a32',
+  gold: '#D4A853', goldDim: 'rgba(212,168,83,0.15)', goldHover: '#e0b96a',
+  text: '#e8e6e1', textDim: '#8a8a8e', textMuted: '#5a5a5e',
+  green: '#4ade80', greenDim: 'rgba(74,222,128,0.15)',
+  red: '#f87171', redDim: 'rgba(248,113,113,0.15)',
+  blue: '#60a5fa', blueDim: 'rgba(96,165,250,0.15)',
+  orange: '#fb923c', orangeDim: 'rgba(251,146,60,0.15)',
+  purple: '#a78bfa', purpleDim: 'rgba(167,139,250,0.15)',
 };
 
-/* ═══ STORAGE ═══ */
-const SK="elevo_v61";
-const load=()=>{try{const s=localStorage.getItem(SK);return s?JSON.parse(s):null}catch{return null}};
-const save=d=>{try{localStorage.setItem(SK,JSON.stringify(d))}catch{}};
+const font = { head: "'Cormorant Garamond', serif", body: "'DM Sans', sans-serif" };
 
-/* ═══ UI COMPONENTS ═══ */
-const Btn=({children,onClick,sm,ghost,danger,accent,disabled,full,sx})=>(
-  <button onClick={onClick} disabled={disabled} style={{
-    padding:sm?"5px 12px":"8px 18px",fontSize:sm?11:12,fontWeight:600,width:full?"100%":undefined,
-    background:danger?C.red+"20":ghost?"transparent":accent?C.accent:C.accentDim,
-    color:danger?C.red:accent?C.bg:C.accent,
-    border:`1px solid ${danger?C.red+"40":ghost?C.border:accent?C.accent:C.accentSoft}`,
-    borderRadius:6,cursor:disabled?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",
-    opacity:disabled?.4:1,transition:"all .15s",lineHeight:1.4,...sx,
-  }}>{children}</button>
+const DEAL_STAGES = ['Lead', 'Kontakt', 'Angebot', 'Verhandlung', 'Gewonnen', 'Verloren'];
+const ACTIVITY_TYPES = ['Anruf', 'E-Mail', 'Loom', 'Meeting', 'Notiz', 'Follow-up', 'Sonstiges'];
+const TASK_CATEGORIES = ['Outreach', 'Ads', 'Projekt', 'Vertrieb', 'Admin'];
+const SERVICES = ['Website', 'SEO', 'Google Ads', 'Beratung', 'Komplett-Paket'];
+
+// ============================================================================
+// ICONS (compact SVG components)
+// ============================================================================
+const Icon = ({ d, size = 18, color = C.textDim, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>{typeof d === 'string' ? <path d={d} /> : d}</svg>
 );
 
-const Badge=({color,children})=>(
-  <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:20,background:color+"18",color,fontSize:11,fontWeight:600}}>
-    <span style={{width:6,height:6,borderRadius:3,background:color}}/>{children}
-  </span>
-);
-
-const Card=({children,onClick,sx})=>(
-  <div onClick={onClick} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:16,cursor:onClick?"pointer":"default",transition:"all .15s",...sx}}>{children}</div>
-);
-
-const Stat=({label,value,sub,color,icon})=>(
-  <Card sx={{flex:1,minWidth:120}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-      <div>
-        <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:".08em",marginBottom:6}}>{label}</div>
-        <div style={{color:color||C.white,fontSize:22,fontWeight:700,fontFamily:"'Cormorant Garamond',serif"}}>{value}</div>
-        {sub&&<div style={{color:C.dim,fontSize:11,marginTop:4}}>{sub}</div>}
-      </div>
-      {icon&&<div style={{fontSize:18,opacity:.3}}>{icon}</div>}
-    </div>
-  </Card>
-);
-
-const Progress=({value,color,h=6})=>(
-  <div style={{width:"100%",height:h,background:C.border,borderRadius:h/2,overflow:"hidden"}}>
-    <div style={{width:`${Math.min(100,value||0)}%`,height:"100%",background:color||C.accent,borderRadius:h/2,transition:"width .5s ease"}}/>
-  </div>
-);
-
-const Section=({title,right,children})=>(
-  <div style={{marginBottom:24}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-      <div style={{color:C.off,fontSize:13,fontWeight:600,letterSpacing:".02em"}}>{title}</div>{right}
-    </div>{children}
-  </div>
-);
-
-const Empty=({text})=>(<div style={{textAlign:"center",padding:40,color:C.dim,fontSize:13}}><div style={{fontSize:28,marginBottom:8,opacity:.3}}>◇</div>{text}</div>);
-
-const Modal=({open,onClose,title,children,wide})=>{
-  if(!open)return null;
-  return(<div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-    <div onClick={e=>e.stopPropagation()} style={{background:C.panel,border:`1px solid ${C.border}`,borderRadius:12,width:"100%",maxWidth:wide?720:500,maxHeight:"88vh",overflow:"auto",padding:24}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div style={{color:C.white,fontSize:16,fontWeight:700}}>{title}</div>
-        <div onClick={onClose} style={{cursor:"pointer",color:C.muted,fontSize:18,padding:4}}>✕</div>
-      </div>{children}
-    </div>
-  </div>);
+const Icons = {
+  dashboard: <Icon d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />,
+  companies: <Icon d={<><path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h0M6 7V3h12v4" /><rect x="9" y="18" width="6" height="3" /></>} />,
+  contacts: <Icon d={<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>} />,
+  pipeline: <Icon d={<><rect x="1" y="3" width="7" height="18" rx="1" /><rect x="9" y="6" width="7" height="15" rx="1" /><rect x="17" y="9" width="6" height="12" rx="1" /></>} />,
+  projects: <Icon d={<><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></>} />,
+  websites: <Icon d={<><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" /></>} />,
+  tasks: <Icon d={<><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></>} />,
+  outreach: <Icon d={<><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><path d="M22 6l-10 7L2 6" /></>} />,
+  ads: <Icon d={<><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" /></>} />,
+  sops: <Icon d={<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></>} />,
+  finances: <Icon d={<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>} />,
+  notes: <Icon d={<><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></>} />,
+  ai: <Icon d={<><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></>} />,
+  settings: <Icon d={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></>} />,
+  search: <Icon d={<><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></>} />,
+  plus: <Icon d="M12 5v14M5 12h14" />,
+  chevLeft: <Icon d="M15 18l-6-6 6-6" />,
+  chevRight: <Icon d="M9 18l6-6-6-6" />,
+  x: <Icon d="M18 6L6 18M6 6l12 12" />,
+  phone: <Icon d={<><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" /></>} />,
+  mail: <Icon d={<><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><path d="M22 6l-10 7L2 6" /></>} />,
+  video: <Icon d={<><rect x="2" y="4" width="15" height="16" rx="2" /><path d="M17 8l5-3v14l-5-3" /></>} />,
+  calendar: <Icon d={<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>} />,
+  alert: <Icon d={<><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" /></>} color={C.orange} />,
+  clock: <Icon d={<><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>} />,
+  check: <Icon d="M20 6L9 17l-5-5" />,
+  edit: <Icon d={<><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></>} />,
+  trash: <Icon d={<><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></>} />,
+  filter: <Icon d={<><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" /></>} />,
 };
 
-const Field=({label,value,onChange,type="text",options,placeholder,rows})=>(
-  <div style={{marginBottom:14}}>
-    <div style={{color:C.muted,fontSize:11,marginBottom:5,fontWeight:500}}>{label}</div>
-    {options?<select value={value||""} onChange={e=>onChange(e.target.value)} style={{width:"100%",padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,color:C.white,fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>
-      <option value="">Auswählen...</option>{options.map(o=><option key={o} value={o}>{o}</option>)}
-    </select>:rows?<textarea value={value||""} onChange={e=>onChange(e.target.value)} rows={rows} placeholder={placeholder} style={{width:"100%",padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,color:C.white,fontSize:13,fontFamily:"'DM Sans',sans-serif",resize:"vertical"}}/>
-    :<input type={type} value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={{width:"100%",padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,color:C.white,fontSize:13,fontFamily:"'DM Sans',sans-serif"}}/>}
-  </div>
-);
+// ============================================================================
+// INITIAL DATA
+// ============================================================================
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+const INITIAL_DATA = {
+  companies: [
+    { id: 'c1', name: 'Bar Lighthouse', industry: 'Gastronomie', website: 'lighthouse-bar.de', email: 'info@lighthouse-bar.de', phone: '', address: 'Aachen', size: 'Klein', source: 'Referenz', tags: ['referenz', 'gastronomie'], created: '2025-01-15' },
+    { id: 'c2', name: 'Ristorante Luigi', industry: 'Gastronomie', website: 'ristorante-luigi.de', email: 'info@ristorante-luigi.de', phone: '', address: 'Aachen', size: 'Klein', source: 'Referenz', tags: ['referenz', 'gastronomie'], created: '2025-01-20' },
+    { id: 'c3', name: 'Heilpraxis Weber', industry: 'Gesundheit', website: 'heilpraxis-weber.de', email: 'info@heilpraxis-weber.de', phone: '', address: 'Remote', size: 'Klein', source: 'Referenz', tags: ['referenz', 'gesundheit'], created: '2025-02-01' },
+    { id: 'c4', name: 'Beispiel GmbH', industry: 'Handel', website: '', email: 'info@beispiel-gmbh.de', phone: '', address: 'Aachen', size: 'KMU', source: 'Outreach', tags: ['prospect'], created: '2025-03-01' },
+  ],
+  contacts: [
+    { id: 'ct1', companyId: 'c1', firstName: 'Tom', lastName: 'Barkeeper', email: 'tom@lighthouse-bar.de', phone: '', position: 'Inhaber', source: 'Direkt', tags: [], lastContact: '2025-03-01' },
+    { id: 'ct2', companyId: 'c2', firstName: 'Luigi', lastName: 'Rossi', email: 'luigi@ristorante-luigi.de', phone: '', position: 'Inhaber', source: 'Direkt', tags: [], lastContact: '2025-03-05' },
+    { id: 'ct3', companyId: 'c3', firstName: 'Anna', lastName: 'Weber', email: 'anna@heilpraxis-weber.de', phone: '', position: 'Inhaberin', source: 'Direkt', tags: [], lastContact: '2025-02-20' },
+    { id: 'ct4', companyId: 'c4', firstName: 'Max', lastName: 'Mustermann', email: 'max@beispiel-gmbh.de', phone: '', position: 'Geschäftsführer', source: 'Outreach', tags: [], lastContact: '2025-03-10' },
+  ],
+  deals: [
+    { id: 'd1', companyId: 'c4', contactId: 'ct4', title: 'Website Relaunch', status: 'Lead', service: 'Website', volume: 1500, source: 'Outreach', followUp: '2025-04-01', notes: 'Erster potenzieller Kunde über Outreach.', created: '2025-03-10' },
+  ],
+  projects: [
+    { id: 'p1', companyId: 'c1', dealId: null, name: 'Website Bar Lighthouse', status: 'In Arbeit', progress: 75, deadline: '2025-05-01', notes: '' },
+    { id: 'p2', companyId: 'c2', dealId: null, name: 'Website Ristorante Luigi', status: 'In Arbeit', progress: 60, deadline: '2025-05-15', notes: '' },
+    { id: 'p3', companyId: 'c3', dealId: null, name: 'Website Heilpraxis Weber', status: 'Planung', progress: 30, deadline: '2025-06-01', notes: '' },
+  ],
+  websites: [
+    { id: 'w1', companyId: 'c1', projectId: 'p1', name: 'Bar Lighthouse', url: 'lighthouse-bar.de', status: 'Entwicklung', hosting: 'Coolify', footerLink: true },
+    { id: 'w2', companyId: 'c2', projectId: 'p2', name: 'Ristorante Luigi', url: 'ristorante-luigi.de', status: 'Entwicklung', hosting: 'Coolify', footerLink: true },
+    { id: 'w3', companyId: 'c3', projectId: 'p3', name: 'Heilpraxis Weber', url: 'heilpraxis-weber.de', status: 'Entwicklung', hosting: 'Coolify', footerLink: true },
+  ],
+  activities: [
+    { id: 'a1', companyId: 'c4', contactId: 'ct4', dealId: 'd1', type: 'E-Mail', subject: 'Erstansprache', content: 'Cold Outreach E-Mail an Max Mustermann gesendet.', date: '2025-03-10T10:00:00' },
+    { id: 'a2', companyId: 'c4', contactId: 'ct4', dealId: 'd1', type: 'Notiz', subject: 'Deal erstellt', content: 'Deal "Website Relaunch" automatisch geloggt.', date: '2025-03-10T10:05:00' },
+  ],
+  tasks: [
+    { id: 't1', companyId: null, text: 'Outreach-Domains kaufen', done: true, priority: 'hoch', category: 'Outreach', due: '2025-03-01' },
+    { id: 't2', companyId: null, text: 'Google Workspace einrichten', done: true, priority: 'hoch', category: 'Outreach', due: '2025-03-01' },
+    { id: 't3', companyId: null, text: 'DNS für alle Domains setzen', done: true, priority: 'hoch', category: 'Outreach', due: '2025-03-02' },
+    { id: 't4', companyId: null, text: 'Instantly starten + Warmup', done: false, priority: 'hoch', category: 'Outreach', due: '2025-03-15' },
+    { id: 't5', companyId: null, text: 'Outscraper: Kontakte scrapen', done: false, priority: 'mittel', category: 'Outreach', due: '2025-03-20' },
+    { id: 't6', companyId: null, text: 'E-Mail-Vorlagen finalisieren', done: false, priority: 'mittel', category: 'Outreach', due: '2025-03-20' },
+    { id: 't7', companyId: null, text: 'Loom-Routine etablieren', done: false, priority: 'mittel', category: 'Outreach', due: '2025-03-25' },
+    { id: 't8', companyId: null, text: 'Erste 10 Looms aufnehmen', done: false, priority: 'hoch', category: 'Outreach', due: '2025-04-01' },
+    { id: 't9', companyId: null, text: 'Google Ads Konto einrichten', done: false, priority: 'hoch', category: 'Ads', due: '2025-03-15' },
+    { id: 't10', companyId: null, text: 'Keywords & Anzeigen erstellen', done: false, priority: 'hoch', category: 'Ads', due: '2025-03-20' },
+    { id: 't11', companyId: null, text: 'Ads live schalten', done: false, priority: 'hoch', category: 'Ads', due: '2025-03-25' },
+    { id: 't12', companyId: 'c1', text: 'Website Bar Lighthouse fertigstellen', done: false, priority: 'hoch', category: 'Projekt', due: '2025-05-01' },
+    { id: 't13', companyId: 'c2', text: 'Website Ristorante Luigi fertigstellen', done: false, priority: 'hoch', category: 'Projekt', due: '2025-05-15' },
+    { id: 't14', companyId: 'c3', text: 'Website Heilpraxis Weber fertigstellen', done: false, priority: 'mittel', category: 'Projekt', due: '2025-06-01' },
+    { id: 't15', companyId: null, text: 'Empfehlungs-Briefing erstellen', done: false, priority: 'mittel', category: 'Vertrieb', due: '2025-04-01' },
+    { id: 't16', companyId: null, text: 'Referenz-Seite auf elevo.solutions', done: false, priority: 'niedrig', category: 'Vertrieb', due: '2025-04-15' },
+    { id: 't17', companyId: null, text: 'Wöchentliche Review einführen', done: false, priority: 'mittel', category: 'Admin', due: '2025-03-17' },
+  ],
+  sops: [
+    { id: 's1', title: 'Neuer Lead – Erstansprache', steps: ['Lead recherchieren (Website, Social, Branche)', 'Personalisierte E-Mail verfassen', 'Loom-Video aufnehmen (optional)', 'E-Mail senden über Instantly', 'Follow-up in 3 Tagen einstellen', 'Aktivität loggen im Command Center'] },
+    { id: 's2', title: 'Website-Projekt – Ablauf', steps: ['Kick-off Meeting', 'Inhalte & Texte sammeln', 'Design-Konzept erstellen', 'Wireframe abstimmen', 'Design umsetzen', 'Responsive optimieren', 'Inhalte einpflegen', 'SEO Basics', 'Testing & QA', 'Kunde abnehmen lassen', 'Go-Live + DNS umstellen'] },
+    { id: 's3', title: 'Wöchentliche Review', steps: ['Pipeline prüfen (offene Deals, Follow-ups)', 'Outreach-Zahlen checken (Öffnungen, Antworten)', 'Ads-Performance prüfen', 'Projekte-Status updaten', 'Tasks für nächste Woche planen', 'Finanzen prüfen'] },
+    { id: 's4', title: 'Tägliche Outreach-Routine', steps: ['Instantly Dashboard checken', '5 neue Leads recherchieren', '3-5 personalisierte E-Mails senden', 'Follow-ups beantworten', 'Aktivitäten loggen'] },
+  ],
+  outreach: {
+    domains: [
+      { name: 'elevo-digital.de', mailboxes: ['info@elevo-digital.de', 'hello@elevo-digital.de'], warmup: 'Aktiv' },
+      { name: 'elevo-aachen.de', mailboxes: ['info@elevo-aachen.de', 'hello@elevo-aachen.de'], warmup: 'Aktiv' },
+      { name: 'elevo-web.de', mailboxes: ['info@elevo-web.de', 'hello@elevo-web.de'], warmup: 'Aktiv' },
+    ],
+    sequences: [
+      { name: 'Webdesign Cold Outreach', steps: [
+        { day: 1, subject: 'Kurze Frage zu eurer Website', body: 'Personalisierter Einstieg + Loom-Link' },
+        { day: 4, subject: 'Follow-up', body: 'Kurzer Nachfasser mit Mehrwert' },
+        { day: 8, subject: 'Letzter Versuch', body: 'Break-up E-Mail mit CTA' },
+      ]},
+    ],
+    lists: [
+      { name: 'Gastronomie Aachen', count: 0, source: 'Outscraper' },
+      { name: 'Handwerker Aachen', count: 0, source: 'Outscraper' },
+      { name: 'Praxen Aachen', count: 0, source: 'Outscraper' },
+    ],
+    looms: [],
+  },
+  ads: {
+    campaigns: [
+      { name: 'Website erstellen Aachen', status: 'Geplant', budget: 75, clicks: 0, impressions: 0, ctr: 0, conversions: 0 },
+      { name: 'Digitalisierung KMU', status: 'Geplant', budget: 75, clicks: 0, impressions: 0, ctr: 0, conversions: 0 },
+    ],
+    budget: 150, region: 'Aachen + 30km', excluded: ['Geilenkirchen'],
+    negativeKeywords: ['kostenlos', 'gratis', 'selber machen', 'template', 'baukasten', 'wix', 'jimdo'],
+  },
+  finances: {
+    fixcosts: [
+      { name: 'Google Ads', amount: 150, category: 'Marketing' },
+      { name: 'Google Workspace', amount: 36, category: 'Tools' },
+      { name: 'Instantly', amount: 28, category: 'Tools' },
+      { name: 'Domains', amount: 2, category: 'Infrastruktur' },
+      { name: 'Outscraper', amount: 25, category: 'Tools' },
+      { name: 'Loom', amount: 0, category: 'Tools' },
+    ],
+    revenue: [],
+  },
+  notes: [],
+  settings: { pin: '', apiKey: '' },
+};
 
-/* ═══════════════════════════════════════════════════════════════════
-   APP
-   ═══════════════════════════════════════════════════════════════════ */
-export default function App(){
-  const[D,setD]=useState(()=>load()||INIT);
-  const[tab,setTab]=useState("dashboard");
-  const[modal,setModal]=useState(null);
-  const[md,setMd]=useState({});
-  const[mob,setMob]=useState(false);
-  const[locked,setLocked]=useState(()=>{const d=load();return d&&d.pin?true:false});
-  const[pinInput,setPinInput]=useState("");
-  const[sideOpen,setSideOpen]=useState(false);
-  const[chatOpen,setChatOpen]=useState(false);
-  const[chatMsgs,setChatMsgs]=useState([]);
-  const[chatInput,setChatInput]=useState("");
-  const[chatLoading,setChatLoading]=useState(false);
-  const chatEndRef=useRef(null);
-  const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("elevo_api_key")||""}catch{return""}});
+// ============================================================================
+// HOOKS
+// ============================================================================
+function useLocalStorage(key, initial) {
+  const [val, setVal] = useState(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; }
+    catch { return initial; }
+  });
+  const set = useCallback((v) => {
+    setVal(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      localStorage.setItem(key, JSON.stringify(next));
+      return next;
+    });
+  }, [key]);
+  return [val, set];
+}
 
-  useEffect(()=>{save(D)},[D]);
-  useEffect(()=>{const c=()=>setMob(window.innerWidth<768);c();window.addEventListener("resize",c);return()=>window.removeEventListener("resize",c)},[]);
+// ============================================================================
+// SHARED STYLES
+// ============================================================================
+const S = {
+  page: { padding: '32px', maxWidth: 1400, margin: '0 auto' },
+  pageTitle: { fontFamily: font.head, fontSize: 28, fontWeight: 600, color: C.text, margin: 0 },
+  pageSub: { fontFamily: font.body, fontSize: 14, color: C.textDim, marginTop: 4 },
+  card: { background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px' },
+  cardHover: { background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px', cursor: 'pointer', transition: 'all 0.2s' },
+  btn: { fontFamily: font.body, fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' },
+  btnGold: { background: C.gold, color: C.bg },
+  btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}` },
+  input: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none', width: '100%' },
+  select: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none' },
+  label: { fontFamily: font.body, fontSize: 12, fontWeight: 500, color: C.textDim, marginBottom: 4, display: 'block' },
+  badge: (bg, color) => ({ fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: bg, color, display: 'inline-block' }),
+  table: { width: '100%', borderCollapse: 'collapse', fontFamily: font.body, fontSize: 13 },
+  th: { textAlign: 'left', padding: '10px 12px', color: C.textDim, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
+  td: { padding: '12px', borderBottom: `1px solid ${C.border}`, color: C.text },
+  link: { color: C.gold, textDecoration: 'none', cursor: 'pointer' },
+};
 
-  const upd=useCallback((k,v)=>setD(p=>({...p,[k]:typeof v==="function"?v(p[k]):v})),[]);
-  const openM=(t,data)=>{setModal(t);setMd(data||{})};
-  const closeM=()=>{setModal(null);setMd({})};
-
-  const pVal=D.pipeline.filter(d=>!["Verloren","Pausiert"].includes(d.status)).reduce((s,d)=>s+(d.volume||0),0);
-  const wonVal=D.pipeline.filter(d=>d.status==="Gewonnen").reduce((s,d)=>s+(d.volume||0),0);
-  const monthlyCost=Object.values(D.finances.monthly).reduce((s,v)=>s+v,0);
-  const totalWarmup=D.outreach.domains.reduce((s,d)=>s+d.warmupDay,0);
-  const totalWarmupTarget=D.outreach.domains.reduce((s,d)=>s+d.warmupTarget,0);
-  const warmupPct=totalWarmupTarget>0?(totalWarmup/totalWarmupTarget)*100:0;
-
-  const saveApiKey=(k)=>{setApiKey(k);try{localStorage.setItem("elevo_api_key",k)}catch{}};
-
-  const sendChat=async()=>{
-    if(!chatInput.trim()||chatLoading||!apiKey)return;
-    const userMsg={role:"user",content:chatInput};
-    const newMsgs=[...chatMsgs,userMsg];
-    setChatMsgs(newMsgs);setChatInput("");setChatLoading(true);
-    setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);
-
-    const pipelineSum=D.pipeline.filter(d=>!["Verloren","Pausiert"].includes(d.status));
-    const systemPrompt=`Du bist der ELEVO KI-Assistent im Command Center. Du hilfst dem Gründer Mert bei allen geschäftlichen Aufgaben.
-
-ÜBER ELEVO:
-- Beratung + operative Umsetzung für KMU/Mittelstand: Digitalisierung, Vertrieb, Marketing
-- Hauptprodukt: Professionelle Websites (1.200-1.500€)
-- Weitere: Digitaler Audit, Strategie-Sessions
-- Region: Aachen + Umkreis
-- Tonalität: Seriös aber menschlich, Du-Ansprache, kurz & kraftvoll
-- Claim: "Dein digitaler Auftritt ist dein erster Vertriebsmitarbeiter."
-
-AKTUELLE GESCHÄFTSDATEN:
-- Pipeline: ${pipelineSum.length} aktive Deals (${eur(pVal)})
-- Gewonnen: ${eur(wonVal)}
-- Kontakte: ${D.contacts.length}
-- Projekte: ${D.projects.length} (${D.projects.filter(p=>p.status==="In Arbeit").length} in Arbeit)
-- Websites: ${D.websites.length} (${D.websites.filter(w=>w.status==="Live").length} live)
-- Monatliche Kosten: ${eur(monthlyCost)}
-- E-Mail Warmup: ${Math.round(warmupPct)}% abgeschlossen
-- Outreach: ${D.outreach.stats.totalSent} gesendet, ${D.outreach.stats.replied} Antworten, ${D.outreach.stats.leads} Leads
-- Offene Tasks: ${D.tasks.filter(t=>!t.done).length} (${D.tasks.filter(t=>!t.done&&t.priority==="Hoch").length} dringend)
-
-AKQUISE-KANÄLE:
-1. Google Ads (${D.ads.budget}€/Monat, Region Aachen, Geilenkirchen ausgeschlossen)
-2. Cold E-Mail Outreach (Instantly.ai, 3 Domains im Warmup)
-3. Loom-Videos an Top-Prospects (5-10/Tag)
-4. 3 Referenz-Websites (Bar, Restaurant, Heilpraktikerin) → Mundpropaganda
-
-DEALS IN PIPELINE:
-${D.pipeline.map(d=>`- ${d.company}: ${d.status}, ${eur(d.volume)}, ${d.service}`).join("\n")}
-
-OFFENE TASKS:
-${D.tasks.filter(t=>!t.done).slice(0,10).map(t=>`- [${t.priority}] ${t.text}`).join("\n")}
-
-Antworte auf Deutsch. Sei direkt, präzise, professionell. Gib konkrete Handlungsempfehlungen. Wenn du Angebote, E-Mails oder Texte schreibst, nutze die ELEVO-Tonalität.`;
-
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2048,system:systemPrompt,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})
-      });
-      const data=await res.json();
-      if(data.content){
-        const text=data.content.map(b=>b.text||"").join("\n");
-        setChatMsgs([...newMsgs,{role:"assistant",content:text}]);
-      }else if(data.error){
-        setChatMsgs([...newMsgs,{role:"assistant",content:`Fehler: ${data.error.message||"API-Fehler"}`}]);
-      }
-    }catch(err){
-      setChatMsgs([...newMsgs,{role:"assistant",content:"Verbindungsfehler. Prüfe deinen API-Key in den Settings."}]);
-    }
-    setChatLoading(false);
-    setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);
+// ============================================================================
+// SHARED COMPONENTS
+// ============================================================================
+const Badge = ({ children, variant = 'default' }) => {
+  const variants = {
+    default: S.badge(C.goldDim, C.gold),
+    green: S.badge(C.greenDim, C.green),
+    red: S.badge(C.redDim, C.red),
+    blue: S.badge(C.blueDim, C.blue),
+    orange: S.badge(C.orangeDim, C.orange),
+    purple: S.badge(C.purpleDim, C.purple),
   };
+  return <span style={variants[variant] || variants.default}>{children}</span>;
+};
 
-  /* ─── PIN LOCK ─── */
-  if(locked){
-    return(
-      <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'DM Sans',sans-serif"}}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}`}</style>
-        <div style={{color:C.accent,fontFamily:"'Cormorant Garamond',serif",fontSize:28,letterSpacing:".3em",fontWeight:700,marginBottom:8}}>E L E V O</div>
-        <div style={{color:C.dim,fontSize:11,letterSpacing:".1em",marginBottom:32}}>COMMAND CENTER</div>
-        <div style={{display:"flex",gap:8,marginBottom:16}}>
-          <input type="password" value={pinInput} onChange={e=>setPinInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&pinInput===D.pin){setLocked(false);setPinInput("")}}} placeholder="PIN" maxLength={8} style={{width:180,padding:"10px 16px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,color:C.white,fontSize:16,textAlign:"center",letterSpacing:".3em",fontFamily:"'DM Sans',sans-serif"}}/>
+const statusBadge = (status) => {
+  const map = { Lead: 'blue', Kontakt: 'purple', Angebot: 'default', Verhandlung: 'orange', Gewonnen: 'green', Verloren: 'red', 'In Arbeit': 'blue', Planung: 'purple', Fertig: 'green', Aktiv: 'green', Geplant: 'orange', Entwicklung: 'blue' };
+  return <Badge variant={map[status] || 'default'}>{status}</Badge>;
+};
+
+const Empty = ({ text }) => (
+  <div style={{ padding: 40, textAlign: 'center', color: C.textMuted, fontFamily: font.body, fontSize: 13 }}>{text}</div>
+);
+
+const Modal = ({ open, onClose, title, children, width = 480 }) => {
+  if (!open) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ ...S.card, position: 'relative', width, maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto', zIndex: 1 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontFamily: font.head, fontSize: 22, color: C.text, margin: 0 }}>{title}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>{React.cloneElement(Icons.x, { color: C.textDim })}</button>
         </div>
-        <Btn accent onClick={()=>{if(pinInput===D.pin){setLocked(false);setPinInput("")}}}>Entsperren</Btn>
-        {pinInput&&pinInput!==D.pin&&pinInput.length>=D.pin.length&&<div style={{color:C.red,fontSize:11,marginTop:12}}>Falscher PIN</div>}
+        {children}
       </div>
-    );
-  }
+    </div>
+  );
+};
 
-  /* ═══ DASHBOARD ═══ */
-  const DashboardPage=()=>{
-    const openTasks=D.tasks.filter(t=>!t.done);
-    const urgentTasks=openTasks.filter(t=>t.priority==="Hoch");
-    const adsSpent=D.ads.campaigns.reduce((s,c)=>s+c.spent,0);
-    const adsClicks=D.ads.campaigns.reduce((s,c)=>s+c.clicks,0);
-    const liveSites=D.websites.filter(w=>w.status==="Live").length;
+const FormRow = ({ label, children }) => (
+  <div style={{ marginBottom: 14 }}>
+    <label style={S.label}>{label}</label>
+    {children}
+  </div>
+);
 
-    return(<div className="fade">
-      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-        <Stat label="Pipeline" value={eur(pVal)} sub={`${D.pipeline.length} Deals`} color={C.accent} icon="◈"/>
-        <Stat label="Gewonnen" value={eur(wonVal)} color={C.green} icon="✓"/>
-        <Stat label="Monatl. Kosten" value={eur(monthlyCost)} color={C.orange} icon="◇"/>
-        <Stat label="Offene Tasks" value={openTasks.length} sub={`${urgentTasks.length} dringend`} color={urgentTasks.length>0?C.red:C.blue} icon="☐"/>
-      </div>
+const BackButton = ({ to, label }) => {
+  const nav = useNavigate();
+  return (
+    <button onClick={() => nav(to)} style={{ ...S.btn, ...S.btnGhost, marginBottom: 20, fontSize: 12 }}>
+      {React.cloneElement(Icons.chevLeft, { size: 14 })} {label || 'Zurück'}
+    </button>
+  );
+};
 
-      <Section title="AKQUISE-KANÄLE">
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:10}}>
-          <Card>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <span style={{color:C.white,fontSize:13,fontWeight:600}}>✉ Cold Outreach</span>
-              <Badge color={D.outreach.stats.totalSent>0?C.green:C.orange}>{D.outreach.stats.totalSent>0?"Aktiv":"Setup"}</Badge>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-              <div><div style={{color:C.dim,fontSize:10}}>Gesendet</div><div style={{color:C.white,fontSize:18,fontWeight:700}}>{D.outreach.stats.totalSent}</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Antworten</div><div style={{color:C.green,fontSize:18,fontWeight:700}}>{D.outreach.stats.replied}</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Leads</div><div style={{color:C.accent,fontSize:18,fontWeight:700}}>{D.outreach.stats.leads}</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Looms</div><div style={{color:C.purple,fontSize:18,fontWeight:700}}>{D.outreach.looms.sent}</div></div>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.muted,marginBottom:4}}><span>E-Mail Warmup</span><span>{pct(warmupPct)}</span></div>
-            <Progress value={warmupPct} color={warmupPct>=100?C.green:C.orange}/>
-          </Card>
+const StatCard = ({ label, value, sub, color = C.gold }) => (
+  <div style={S.card}>
+    <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
+    <div style={{ fontFamily: font.head, fontSize: 32, fontWeight: 600, color }}>{value}</div>
+    {sub && <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginTop: 4 }}>{sub}</div>}
+  </div>
+);
 
-          <Card>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <span style={{color:C.white,fontSize:13,fontWeight:600}}>◎ Google Ads</span>
-              <Badge color={adsSpent>0?C.green:C.orange}>{adsSpent>0?"Live":"Setup"}</Badge>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-              <div><div style={{color:C.dim,fontSize:10}}>Ausgegeben</div><div style={{color:C.white,fontSize:18,fontWeight:700}}>{eur(adsSpent)}</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Klicks</div><div style={{color:C.blue,fontSize:18,fontWeight:700}}>{adsClicks}</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Conversions</div><div style={{color:C.green,fontSize:18,fontWeight:700}}>{D.ads.campaigns.reduce((s,c)=>s+c.conversions,0)}</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Budget</div><div style={{color:C.accent,fontSize:18,fontWeight:700}}>{eur(D.ads.budget)}/Mo</div></div>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.muted,marginBottom:4}}><span>Budget verbraucht</span><span>{D.ads.budget>0?pct((adsSpent/D.ads.budget)*100):"0%"}</span></div>
-            <Progress value={D.ads.budget>0?(adsSpent/D.ads.budget)*100:0} color={C.blue}/>
-          </Card>
+const Tabs = ({ tabs, active, onChange }) => (
+  <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.border}`, marginBottom: 20 }}>
+    {tabs.map(t => (
+      <button key={t} onClick={() => onChange(t)} style={{ ...S.btn, background: 'none', color: active === t ? C.gold : C.textDim, borderBottom: active === t ? `2px solid ${C.gold}` : '2px solid transparent', borderRadius: 0, padding: '10px 16px', fontSize: 13 }}>{t}</button>
+    ))}
+  </div>
+);
 
-          <Card>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <span style={{color:C.white,fontSize:13,fontWeight:600}}>◐ Referenz-Websites</span>
-              <Badge color={C.blue}>{liveSites}/{D.websites.length} Live</Badge>
-            </div>
-            {D.websites.map(w=><div key={w.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
-              <span style={{color:C.off,fontSize:12}}>{w.name}</span><Badge color={WEB_C[w.status]||C.muted}>{w.status}</Badge>
-            </div>)}
-          </Card>
+// ============================================================================
+// GLOBAL SEARCH (Cmd+K)
+// ============================================================================
+const GlobalSearch = ({ data, open, onClose }) => {
+  const [q, setQ] = useState('');
+  const nav = useNavigate();
+  const inputRef = useRef(null);
 
-          <Card>
-            <span style={{color:C.white,fontSize:13,fontWeight:600}}>♦ Mundpropaganda</span>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12}}>
-              <div><div style={{color:C.dim,fontSize:10}}>Empfehlungsgeber</div><div style={{color:C.white,fontSize:18,fontWeight:700}}>3</div></div>
-              <div><div style={{color:C.dim,fontSize:10}}>Empfehlungen erhalten</div><div style={{color:C.accent,fontSize:18,fontWeight:700}}>0</div></div>
-            </div>
-            <div style={{color:C.dim,fontSize:11,marginTop:12,fontStyle:"italic"}}>Aktiviert sich sobald Referenz-Websites live gehen.</div>
-          </Card>
+  useEffect(() => { if (open) { setQ(''); setTimeout(() => inputRef.current?.focus(), 50); } }, [open]);
+
+  const results = useMemo(() => {
+    if (!q.trim()) return [];
+    const lq = q.toLowerCase();
+    const r = [];
+    data.companies.forEach(c => { if (c.name.toLowerCase().includes(lq) || c.industry?.toLowerCase().includes(lq)) r.push({ type: 'Company', name: c.name, sub: c.industry, path: `/companies/${c.id}` }); });
+    data.contacts.forEach(c => { const name = `${c.firstName} ${c.lastName}`; if (name.toLowerCase().includes(lq) || c.email?.toLowerCase().includes(lq)) r.push({ type: 'Kontakt', name, sub: c.position, path: `/contacts/${c.id}` }); });
+    data.deals.forEach(d => { if (d.title.toLowerCase().includes(lq)) r.push({ type: 'Deal', name: d.title, sub: `${d.volume}€`, path: `/deals/${d.id}` }); });
+    data.projects.forEach(p => { if (p.name.toLowerCase().includes(lq)) r.push({ type: 'Projekt', name: p.name, sub: p.status, path: `/projects` }); });
+    data.websites.forEach(w => { if (w.name.toLowerCase().includes(lq) || w.url?.toLowerCase().includes(lq)) r.push({ type: 'Website', name: w.name, sub: w.url, path: `/websites` }); });
+    return r.slice(0, 8);
+  }, [q, data]);
+
+  if (!open) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 120 }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ ...S.card, position: 'relative', width: 520, maxWidth: '90vw', zIndex: 1, padding: 0, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+          {React.cloneElement(Icons.search, { color: C.textDim, size: 16 })}
+          <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Suche nach Firmen, Kontakten, Deals..." style={{ ...S.input, border: 'none', background: 'transparent', padding: 0, fontSize: 14 }} />
+          <kbd style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted, background: C.bgHover, padding: '2px 6px', borderRadius: 4, border: `1px solid ${C.border}` }}>ESC</kbd>
         </div>
-      </Section>
+        {results.length > 0 && (
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            {results.map((r, i) => (
+              <div key={i} onClick={() => { nav(r.path); onClose(); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', cursor: 'pointer', borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = C.bgHover} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <Badge variant={r.type === 'Company' ? 'default' : r.type === 'Kontakt' ? 'blue' : r.type === 'Deal' ? 'green' : 'purple'}>{r.type}</Badge>
+              <div>
+                <div style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{r.name}</div>
+                {r.sub && <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{r.sub}</div>}
+              </div>
+            </div>
+            ))}
+          </div>
+        )}
+        {q && results.length === 0 && <Empty text="Keine Ergebnisse" />}
+      </div>
+    </div>
+  );
+};
 
-      <Section title="DRINGENDE AUFGABEN" right={<Btn sm onClick={()=>setTab("tasks")}>Alle →</Btn>}>
-        {urgentTasks.length===0?<div style={{color:C.dim,fontSize:12,padding:12}}>Keine dringenden Tasks – gut so!</div>:
-          urgentTasks.slice(0,6).map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,marginBottom:4}}>
-            <div onClick={()=>upd("tasks",ts=>ts.map(x=>x.id===t.id?{...x,done:!x.done}:x))} style={{width:18,height:18,borderRadius:4,border:`2px solid ${C.accent}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.green,flexShrink:0}}/>
-            <span style={{flex:1,color:C.off,fontSize:12}}>{t.text}</span>
-            <Badge color={t.category==="Outreach"?C.cyan:t.category==="Ads"?C.blue:t.category==="Vertrieb"?C.purple:C.accent}>{t.category}</Badge>
-          </div>)
+// ============================================================================
+// SIDEBAR + LAYOUT
+// ============================================================================
+const NAV = [
+  { label: 'Dashboard', icon: 'dashboard', path: '/' },
+  { label: 'Companies', icon: 'companies', path: '/companies' },
+  { label: 'Kontakte', icon: 'contacts', path: '/contacts' },
+  { label: 'Pipeline', icon: 'pipeline', path: '/pipeline' },
+  { label: 'Projekte', icon: 'projects', path: '/projects' },
+  { label: 'Websites', icon: 'websites', path: '/websites' },
+  { label: 'Tasks', icon: 'tasks', path: '/tasks' },
+  { type: 'divider' },
+  { label: 'Outreach', icon: 'outreach', path: '/outreach' },
+  { label: 'Google Ads', icon: 'ads', path: '/ads' },
+  { type: 'divider' },
+  { label: 'SOPs', icon: 'sops', path: '/sops' },
+  { label: 'Finanzen', icon: 'finances', path: '/finances' },
+  { label: 'Notizen', icon: 'notes', path: '/notes' },
+  { type: 'divider' },
+  { label: 'KI-Assistent', icon: 'ai', path: '/assistant' },
+  { label: 'Settings', icon: 'settings', path: '/settings' },
+];
+
+const Sidebar = ({ collapsed, onToggle }) => {
+  const loc = useLocation();
+  const isActive = (path) => path === '/' ? loc.pathname === '/' : loc.pathname.startsWith(path);
+
+  return (
+    <aside style={{ width: collapsed ? 64 : 220, minHeight: '100vh', background: C.bgCard, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', transition: 'width 0.25s ease', overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{ padding: collapsed ? '20px 12px' : '20px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={onToggle}>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: font.head, fontSize: 18, fontWeight: 700, color: C.bg, flexShrink: 0 }}>E</div>
+        {!collapsed && <span style={{ fontFamily: font.head, fontSize: 18, fontWeight: 600, color: C.text, letterSpacing: '0.05em' }}>ELEVO</span>}
+      </div>
+      <nav style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
+        {NAV.map((item, i) => {
+          if (item.type === 'divider') return <div key={i} style={{ height: 1, background: C.border, margin: '8px 4px' }} />;
+          const active = isActive(item.path);
+          return (
+            <Link key={item.path} to={item.path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px 12px' : '8px 12px', borderRadius: 8, textDecoration: 'none', background: active ? C.goldDim : 'transparent', color: active ? C.gold : C.textDim, fontFamily: font.body, fontSize: 13, fontWeight: active ? 500 : 400, transition: 'all 0.15s', marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+              {React.cloneElement(Icons[item.icon], { color: active ? C.gold : C.textDim, size: 16 })}
+              {!collapsed && item.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div style={{ padding: '12px', borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
+        <span style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted }}>v7.0 Phase 1</span>
+      </div>
+    </aside>
+  );
+};
+
+const Topbar = ({ onSearch }) => (
+  <header style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: C.bgCard }}>
+    <button onClick={onSearch} style={{ ...S.btn, ...S.btnGhost, fontSize: 12, color: C.textMuted, gap: 8 }}>
+      {React.cloneElement(Icons.search, { size: 14, color: C.textMuted })} Suche
+      <kbd style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted, background: C.bgHover, padding: '1px 5px', borderRadius: 3, border: `1px solid ${C.border}`, marginLeft: 4 }}>⌘K</kbd>
+    </button>
+    <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+  </header>
+);
+
+// ============================================================================
+// DATA CONTEXT — passed down via props for simplicity
+// ============================================================================
+function useAppData() {
+  const [data, setData] = useLocalStorage('elevo-v7', INITIAL_DATA);
+
+  const helpers = useMemo(() => ({
+    companyContacts: (cid) => data.contacts.filter(c => c.companyId === cid),
+    companyDeals: (cid) => data.deals.filter(d => d.companyId === cid),
+    companyProjects: (cid) => data.projects.filter(p => p.companyId === cid),
+    companyWebsites: (cid) => data.websites.filter(w => w.companyId === cid),
+    companyActivities: (cid) => data.activities.filter(a => a.companyId === cid).sort((a, b) => new Date(b.date) - new Date(a.date)),
+    companyTasks: (cid) => data.tasks.filter(t => t.companyId === cid),
+    contactDeals: (ctid) => data.deals.filter(d => d.contactId === ctid),
+    contactActivities: (ctid) => data.activities.filter(a => a.contactId === ctid).sort((a, b) => new Date(b.date) - new Date(a.date)),
+    dealActivities: (did) => data.activities.filter(a => a.dealId === did).sort((a, b) => new Date(b.date) - new Date(a.date)),
+    getCompany: (id) => data.companies.find(c => c.id === id),
+    getContact: (id) => data.contacts.find(c => c.id === id),
+    getDeal: (id) => data.deals.find(d => d.id === id),
+    getProject: (id) => data.projects.find(p => p.id === id),
+    overdueFollowups: () => data.deals.filter(d => d.followUp && new Date(d.followUp) < new Date() && d.status !== 'Gewonnen' && d.status !== 'Verloren'),
+    pipelineValue: () => data.deals.filter(d => !['Gewonnen', 'Verloren'].includes(d.status)).reduce((s, d) => s + (d.volume || 0), 0),
+    wonValue: () => data.deals.filter(d => d.status === 'Gewonnen').reduce((s, d) => s + (d.volume || 0), 0),
+  }), [data]);
+
+  const actions = useMemo(() => ({
+    addCompany: (c) => setData(d => ({ ...d, companies: [...d.companies, { ...c, id: uid(), created: new Date().toISOString().slice(0, 10) }] })),
+    updateCompany: (id, upd) => setData(d => ({ ...d, companies: d.companies.map(c => c.id === id ? { ...c, ...upd } : c) })),
+    deleteCompany: (id) => setData(d => ({ ...d, companies: d.companies.filter(c => c.id !== id), contacts: d.contacts.filter(c => c.companyId !== id), deals: d.deals.filter(dd => dd.companyId !== id), activities: d.activities.filter(a => a.companyId !== id) })),
+    addContact: (c) => setData(d => ({ ...d, contacts: [...d.contacts, { ...c, id: uid(), lastContact: new Date().toISOString().slice(0, 10) }] })),
+    updateContact: (id, upd) => setData(d => ({ ...d, contacts: d.contacts.map(c => c.id === id ? { ...c, ...upd } : c) })),
+    deleteContact: (id) => setData(d => ({ ...d, contacts: d.contacts.filter(c => c.id !== id) })),
+    addDeal: (deal) => {
+      const id = uid();
+      setData(d => ({
+        ...d,
+        deals: [...d.deals, { ...deal, id, created: new Date().toISOString().slice(0, 10) }],
+        activities: [...d.activities, { id: uid(), companyId: deal.companyId, contactId: deal.contactId, dealId: id, type: 'Notiz', subject: 'Deal erstellt', content: `Deal "${deal.title}" wurde erstellt.`, date: new Date().toISOString() }],
+      }));
+      return id;
+    },
+    updateDeal: (id, upd) => setData(d => ({ ...d, deals: d.deals.map(dd => dd.id === id ? { ...dd, ...upd } : dd) })),
+    deleteDeal: (id) => setData(d => ({ ...d, deals: d.deals.filter(dd => dd.id !== id) })),
+    addActivity: (a) => {
+      const act = { ...a, id: uid(), date: a.date || new Date().toISOString() };
+      setData(d => {
+        const next = { ...d, activities: [...d.activities, act] };
+        if (act.contactId) {
+          next.contacts = d.contacts.map(c => c.id === act.contactId ? { ...c, lastContact: new Date().toISOString().slice(0, 10) } : c);
         }
-      </Section>
+        return next;
+      });
+    },
+    addProject: (p) => setData(d => ({ ...d, projects: [...d.projects, { ...p, id: uid() }] })),
+    updateProject: (id, upd) => setData(d => ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, ...upd } : p) })),
+    addWebsite: (w) => setData(d => ({ ...d, websites: [...d.websites, { ...w, id: uid() }] })),
+    updateWebsite: (id, upd) => setData(d => ({ ...d, websites: d.websites.map(w => w.id === id ? { ...w, ...upd } : w) })),
+    addTask: (t) => setData(d => ({ ...d, tasks: [...d.tasks, { ...t, id: uid(), done: false }] })),
+    updateTask: (id, upd) => setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, ...upd } : t) })),
+    toggleTask: (id) => setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) })),
+    deleteTask: (id) => setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) })),
+    addNote: (n) => setData(d => ({ ...d, notes: [...d.notes, { ...n, id: uid(), created: new Date().toISOString() }] })),
+    deleteNote: (id) => setData(d => ({ ...d, notes: d.notes.filter(n => n.id !== id) })),
+    updateOutreach: (upd) => setData(d => ({ ...d, outreach: { ...d.outreach, ...upd } })),
+    updateAds: (upd) => setData(d => ({ ...d, ads: { ...d.ads, ...upd } })),
+    updateFinances: (upd) => setData(d => ({ ...d, finances: { ...d.finances, ...upd } })),
+    updateSettings: (upd) => setData(d => ({ ...d, settings: { ...d.settings, ...upd } })),
+    resetData: () => { localStorage.removeItem('elevo-v7'); window.location.reload(); },
+    exportData: () => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `elevo-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+    },
+    importData: (json) => { try { setData(JSON.parse(json)); return true; } catch { return false; } },
+  }), [data, setData]);
 
-      <Section title="TIMELINE">
-        <div style={{position:"relative",paddingLeft:20}}>
-          <div style={{position:"absolute",left:6,top:0,bottom:0,width:2,background:C.border}}/>
-          {[
-            {d:"16. März",l:"Heute Abend",t:"Infrastruktur: Domains, Workspace, DNS, Instantly, Warmup starten",c:C.accent,a:true},
-            {d:"17-19. März",l:"Diese Woche",t:"3 Referenz-Websites fertigstellen & ausliefern",c:C.blue},
-            {d:"18-20. März",l:"Diese Woche",t:"Google Ads einrichten & live schalten",c:C.blue},
-            {d:"Ab 19. März",l:"Ab Mittwoch",t:"Erste Looms an Top-Prospects (5-10/Tag)",c:C.purple},
-            {d:"~6. April",l:"In 3 Wochen",t:"Cold E-Mails gehen live nach Warmup",c:C.green},
-            {d:"April",l:"Ziel",t:"Erster zahlender Kunde → 1.200–1.500€",c:C.accent},
-          ].map((it,i)=><div key={i} style={{display:"flex",gap:14,marginBottom:16,position:"relative"}}>
-            <div style={{width:14,height:14,borderRadius:7,background:it.a?it.c:C.card,border:`2px solid ${it.c}`,flexShrink:0,marginTop:2,position:"relative",zIndex:1}}/>
-            <div><div style={{display:"flex",gap:8,alignItems:"center",marginBottom:2}}>
-              <span style={{color:it.c,fontSize:11,fontWeight:700}}>{it.d}</span><span style={{color:C.dim,fontSize:10}}>{it.l}</span>
-            </div><div style={{color:C.off,fontSize:12}}>{it.t}</div></div>
-          </div>)}
+  return { data, helpers, actions };
+}
+
+// ============================================================================
+// ACTIVITY TIMELINE COMPONENT
+// ============================================================================
+const ActivityTimeline = ({ activities }) => {
+  if (!activities.length) return <Empty text="Noch keine Aktivitäten" />;
+  const iconMap = { 'Anruf': Icons.phone, 'E-Mail': Icons.mail, 'Loom': Icons.video, 'Meeting': Icons.calendar, 'Notiz': Icons.notes, 'Follow-up': Icons.clock, 'Sonstiges': Icons.edit };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {activities.map(a => (
+        <div key={a.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: C.goldDim, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {React.cloneElement(iconMap[a.type] || Icons.edit, { size: 14, color: C.gold })}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{a.subject}</span>
+              <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date(a.date).toLocaleDateString('de-DE')} {new Date(a.date).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginTop: 2 }}>{a.content}</div>
+            <Badge variant={a.type === 'E-Mail' ? 'blue' : a.type === 'Anruf' ? 'green' : a.type === 'Meeting' ? 'purple' : 'default'}>{a.type}</Badge>
+          </div>
         </div>
-      </Section>
-    </div>);
+      ))}
+    </div>
+  );
+};
+
+// ============================================================================
+// QUICK LOG ACTIVITY MODAL
+// ============================================================================
+const QuickLogModal = ({ open, onClose, companyId, contactId, dealId, contacts, deals, actions }) => {
+  const [form, setForm] = useState({ type: 'Anruf', subject: '', content: '', contactId: contactId || '', dealId: dealId || '' });
+  useEffect(() => { if (open) setForm({ type: 'Anruf', subject: '', content: '', contactId: contactId || '', dealId: dealId || '' }); }, [open, contactId, dealId]);
+
+  const save = () => {
+    if (!form.subject.trim()) return;
+    actions.addActivity({ companyId, contactId: form.contactId || null, dealId: form.dealId || null, type: form.type, subject: form.subject, content: form.content });
+    onClose();
   };
 
-  /* ═══ PIPELINE ═══ */
-  const PipelinePage=()=>(<div className="fade">
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <span style={{color:C.muted,fontSize:12}}>{D.pipeline.length} Deals · {eur(pVal)}</span>
-      <Btn sm onClick={()=>openM("deal")}>+ Deal</Btn>
-    </div>
-    <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>
-      {STAGES.map(stage=>{const deals=D.pipeline.filter(p=>p.status===stage);const sv=deals.reduce((s,d)=>s+(d.volume||0),0);
-        return(<div key={stage} style={{flex:mob?"0 0 250px":1,minWidth:180}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,padding:"0 4px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:4,background:STAGE_C[stage]}}/><span style={{color:C.off,fontSize:12,fontWeight:600}}>{stage}</span></div>
-            <span style={{color:C.dim,fontSize:11}}>{eur(sv)}</span>
+  return (
+    <Modal open={open} onClose={onClose} title="Aktivität loggen">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormRow label="Typ">
+          <select style={S.select} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            {ACTIVITY_TYPES.map(t => <option key={t}>{t}</option>)}
+          </select>
+        </FormRow>
+        {contacts && <FormRow label="Kontakt">
+          <select style={S.select} value={form.contactId} onChange={e => setForm(f => ({ ...f, contactId: e.target.value }))}>
+            <option value="">– Kein Kontakt –</option>
+            {contacts.map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+          </select>
+        </FormRow>}
+      </div>
+      <FormRow label="Betreff">
+        <input style={S.input} value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="z.B. Anruf wegen Angebot" />
+      </FormRow>
+      <FormRow label="Details">
+        <textarea style={{ ...S.input, minHeight: 60, resize: 'vertical' }} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} placeholder="Optional..." />
+      </FormRow>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+        <button onClick={onClose} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+        <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+      </div>
+    </Modal>
+  );
+};
+
+// ============================================================================
+// PAGES — DASHBOARD
+// ============================================================================
+const Dashboard = ({ data, helpers, actions }) => {
+  const overdue = helpers.overdueFollowups();
+  const openDeals = data.deals.filter(d => !['Gewonnen', 'Verloren'].includes(d.status));
+  const openTasks = data.tasks.filter(t => !t.done);
+  const recentActs = [...data.activities].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+  return (
+    <div style={S.page}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={S.pageTitle}>Command Center</h1>
+        <p style={S.pageSub}>Willkommen zurück. Hier ist dein Überblick.</p>
+      </div>
+
+      {overdue.length > 0 && (
+        <div style={{ ...S.card, background: C.orangeDim, borderColor: C.orange, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+          {Icons.alert}
+          <div>
+            <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.orange }}>{overdue.length} überfällige Follow-up{overdue.length > 1 ? 's' : ''}</div>
+            <div style={{ fontFamily: font.body, fontSize: 12, color: C.text, marginTop: 2 }}>
+              {overdue.map(d => d.title).join(', ')}
+            </div>
           </div>
-          <div style={{minHeight:80,background:C.panel,borderRadius:8,padding:6,border:`1px solid ${C.border}`}}>
-            {deals.length===0?<div style={{color:C.dim,fontSize:11,textAlign:"center",padding:20}}>Leer</div>:
-              deals.map(d=><Card key={d.id} onClick={()=>openM("deal",d)} sx={{marginBottom:6,padding:12}}>
-                <div style={{color:C.white,fontSize:13,fontWeight:600,marginBottom:4}}>{d.company}</div>
-                <div style={{color:C.muted,fontSize:11,marginBottom:6}}>{d.service} · {d.contact}</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span style={{color:C.accent,fontSize:14,fontWeight:700}}>{eur(d.volume)}</span>
-                  {d.followUp&&<span style={{color:C.dim,fontSize:10}}>FU: {fdt(d.followUp)}</span>}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+        <StatCard label="Pipeline-Wert" value={`${helpers.pipelineValue().toLocaleString('de-DE')}€`} sub={`${openDeals.length} offene Deals`} />
+        <StatCard label="Gewonnen" value={`${helpers.wonValue().toLocaleString('de-DE')}€`} color={C.green} />
+        <StatCard label="Companies" value={data.companies.length} sub={`${data.contacts.length} Kontakte`} color={C.blue} />
+        <StatCard label="Offene Tasks" value={openTasks.length} sub={`von ${data.tasks.length} gesamt`} color={C.orange} />
+        <StatCard label="Fixkosten" value={`${data.finances.fixcosts.reduce((s, f) => s + f.amount, 0)}€`} sub="pro Monat" color={C.red} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Offene Deals</h3>
+          {openDeals.length === 0 ? <Empty text="Keine offenen Deals" /> : openDeals.map(d => {
+            const comp = helpers.getCompany(d.companyId);
+            return (
+              <Link key={d.id} to={`/deals/${d.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}`, textDecoration: 'none' }}>
+                <div>
+                  <div style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{d.title}</div>
+                  <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
                 </div>
-              </Card>)
-            }
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</div>
+                  {statusBadge(d.status)}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Letzte Aktivitäten</h3>
+          {recentActs.length === 0 ? <Empty text="Keine Aktivitäten" /> :
+            recentActs.map(a => {
+              const comp = helpers.getCompany(a.companyId);
+              return (
+                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+                  <div>
+                    <div style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{a.subject}</div>
+                    <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <Badge>{a.type}</Badge>
+                    <div style={{ fontFamily: font.body, fontSize: 10, color: C.textMuted, marginTop: 2 }}>{new Date(a.date).toLocaleDateString('de-DE')}</div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      <div style={{ ...S.card, marginTop: 20 }}>
+        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Projekte</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+          {data.projects.map(p => {
+            const comp = helpers.getCompany(p.companyId);
+            return (
+              <div key={p.id} style={{ ...S.card, padding: 14 }}>
+                <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{p.name}</div>
+                <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, marginBottom: 8 }}>{comp?.name} • {p.deadline && `Deadline: ${new Date(p.deadline).toLocaleDateString('de-DE')}`}</div>
+                <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2, transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <span style={{ fontFamily: font.body, fontSize: 10, color: C.textDim }}>{p.progress}%</span>
+                  {statusBadge(p.status)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — COMPANIES
+// ============================================================================
+const Companies = ({ data, helpers, actions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState('');
+  const [form, setForm] = useState({ name: '', industry: '', website: '', email: '', phone: '', address: '', size: '', source: '' });
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return data.companies.filter(c => c.name.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || c.address?.toLowerCase().includes(q));
+  }, [data.companies, search]);
+
+  const save = () => {
+    if (!form.name.trim()) return;
+    actions.addCompany({ ...form, tags: [] });
+    setShowAdd(false);
+    setForm({ name: '', industry: '', website: '', email: '', phone: '', address: '', size: '', source: '' });
+  };
+
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h1 style={S.pageTitle}>Companies</h1>
+          <p style={S.pageSub}>{data.companies.length} Firmen</p>
+        </div>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue Firma</button>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <input style={{ ...S.input, maxWidth: 320 }} placeholder="Firmen durchsuchen..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+
+      <div style={S.card}>
+        <table style={S.table}>
+          <thead><tr>
+            <th style={S.th}>Firma</th><th style={S.th}>Branche</th><th style={S.th}>Ort</th><th style={S.th}>Kontakte</th><th style={S.th}>Deals</th><th style={S.th}>Volumen</th><th style={S.th}>Quelle</th>
+          </tr></thead>
+          <tbody>
+            {filtered.map(c => {
+              const cts = helpers.companyContacts(c.id);
+              const dls = helpers.companyDeals(c.id);
+              const vol = dls.reduce((s, d) => s + (d.volume || 0), 0);
+              return (
+                <tr key={c.id} style={{ cursor: 'pointer', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = C.bgHover} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <td style={S.td}><Link to={`/companies/${c.id}`} style={{ ...S.link, fontWeight: 500 }}>{c.name}</Link></td>
+                  <td style={S.td}><span style={{ color: C.textDim }}>{c.industry}</span></td>
+                  <td style={S.td}><span style={{ color: C.textDim }}>{c.address}</span></td>
+                  <td style={S.td}><Badge variant="blue">{cts.length}</Badge></td>
+                  <td style={S.td}><Badge variant="purple">{dls.length}</Badge></td>
+                  <td style={{ ...S.td, fontWeight: 500, color: vol > 0 ? C.gold : C.textDim }}>{vol > 0 ? `${vol.toLocaleString('de-DE')}€` : '–'}</td>
+                  <td style={S.td}>{statusBadge(c.source)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {filtered.length === 0 && <Empty text="Keine Firmen gefunden" />}
+      </div>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Neue Firma">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Firmenname *"><input style={S.input} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="Branche"><input style={S.input} value={form.industry} onChange={e => setForm(f => ({ ...f, industry: e.target.value }))} /></FormRow>
+          <FormRow label="Website"><input style={S.input} value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></FormRow>
+          <FormRow label="Ort"><input style={S.input} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></FormRow>
+          <FormRow label="Größe"><select style={S.select} value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))}><option value="">–</option><option>Klein</option><option>KMU</option><option>Mittelstand</option><option>Groß</option></select></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}><option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Referenz</option><option>Direkt</option></select></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — COMPANY DETAIL (360°)
+// ============================================================================
+const CompanyDetail = ({ data, helpers, actions }) => {
+  const { id } = useParams();
+  const company = helpers.getCompany(id);
+  const [tab, setTab] = useState('Übersicht');
+  const [logOpen, setLogOpen] = useState(false);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [showAddDeal, setShowAddDeal] = useState(false);
+  const [ctForm, setCtForm] = useState({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '' });
+  const [dlForm, setDlForm] = useState({ title: '', contactId: '', status: 'Lead', service: 'Website', volume: '', source: '', followUp: '', notes: '' });
+
+  if (!company) return <div style={S.page}><BackButton to="/companies" label="Zurück zu Companies" /><Empty text="Firma nicht gefunden" /></div>;
+
+  const contacts = helpers.companyContacts(id);
+  const deals = helpers.companyDeals(id);
+  const projects = helpers.companyProjects(id);
+  const websites = helpers.companyWebsites(id);
+  const activities = helpers.companyActivities(id);
+  const tasks = helpers.companyTasks(id);
+
+  const saveContact = () => {
+    if (!ctForm.firstName.trim()) return;
+    actions.addContact({ ...ctForm, companyId: id, tags: [] });
+    setShowAddContact(false); setCtForm({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '' });
+  };
+
+  const saveDeal = () => {
+    if (!dlForm.title.trim()) return;
+    actions.addDeal({ ...dlForm, companyId: id, volume: Number(dlForm.volume) || 0 });
+    setShowAddDeal(false); setDlForm({ title: '', contactId: '', status: 'Lead', service: 'Website', volume: '', source: '', followUp: '', notes: '' });
+  };
+
+  return (
+    <div style={S.page}>
+      <BackButton to="/companies" label="Zurück zu Companies" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <h1 style={S.pageTitle}>{company.name}</h1>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {company.industry && <Badge>{company.industry}</Badge>}
+            {company.address && <Badge variant="blue">{company.address}</Badge>}
+            {company.source && <Badge variant="purple">{company.source}</Badge>}
           </div>
-        </div>);
+        </div>
+        <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+        <StatCard label="Kontakte" value={contacts.length} color={C.blue} />
+        <StatCard label="Deals" value={deals.length} color={C.purple} />
+        <StatCard label="Volumen" value={`${deals.reduce((s, d) => s + (d.volume || 0), 0).toLocaleString('de-DE')}€`} />
+        <StatCard label="Projekte" value={projects.length} color={C.green} />
+      </div>
+
+      <Tabs tabs={['Übersicht', 'Aktivitäten', 'Deals', 'Kontakte', 'Projekte']} active={tab} onChange={setTab} />
+
+      {tab === 'Übersicht' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div style={S.card}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Details</h3>
+            {[['Website', company.website], ['E-Mail', company.email], ['Telefon', company.phone], ['Größe', company.size], ['Erstellt', company.created && new Date(company.created).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l}</span>
+                <span style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{v}</span>
+              </div>
+            ) : null)}
+          </div>
+          <div style={S.card}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Letzte Aktivitäten</h3>
+            <ActivityTimeline activities={activities.slice(0, 5)} />
+          </div>
+        </div>
+      )}
+
+      {tab === 'Aktivitäten' && (
+        <div style={S.card}>
+          <ActivityTimeline activities={activities} />
+        </div>
+      )}
+
+      {tab === 'Deals' && (
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Deals</h3>
+            <button onClick={() => setShowAddDeal(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Deal</button>
+          </div>
+          {deals.length === 0 ? <Empty text="Keine Deals" /> : (
+            <table style={S.table}><thead><tr><th style={S.th}>Deal</th><th style={S.th}>Status</th><th style={S.th}>Service</th><th style={S.th}>Volumen</th><th style={S.th}>Kontakt</th></tr></thead>
+              <tbody>{deals.map(d => {
+                const ct = helpers.getContact(d.contactId);
+                return <tr key={d.id}><td style={S.td}><Link to={`/deals/${d.id}`} style={S.link}>{d.title}</Link></td><td style={S.td}>{statusBadge(d.status)}</td><td style={{ ...S.td, color: C.textDim }}>{d.service}</td><td style={{ ...S.td, fontWeight: 500, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</td><td style={S.td}>{ct && <Link to={`/contacts/${ct.id}`} style={S.link}>{ct.firstName} {ct.lastName}</Link>}</td></tr>;
+              })}</tbody></table>
+          )}
+        </div>
+      )}
+
+      {tab === 'Kontakte' && (
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Kontakte</h3>
+            <button onClick={() => setShowAddContact(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Kontakt</button>
+          </div>
+          {contacts.length === 0 ? <Empty text="Keine Kontakte" /> : (
+            <table style={S.table}><thead><tr><th style={S.th}>Name</th><th style={S.th}>Position</th><th style={S.th}>E-Mail</th><th style={S.th}>Letzter Kontakt</th></tr></thead>
+              <tbody>{contacts.map(c => (
+                <tr key={c.id}><td style={S.td}><Link to={`/contacts/${c.id}`} style={S.link}>{c.firstName} {c.lastName}</Link></td><td style={{ ...S.td, color: C.textDim }}>{c.position}</td><td style={{ ...S.td, color: C.textDim }}>{c.email}</td><td style={{ ...S.td, color: C.textDim }}>{c.lastContact && new Date(c.lastContact).toLocaleDateString('de-DE')}</td></tr>
+              ))}</tbody></table>
+          )}
+        </div>
+      )}
+
+      {tab === 'Projekte' && (
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 16px' }}>Projekte & Websites</h3>
+          {projects.length === 0 ? <Empty text="Keine Projekte" /> : projects.map(p => {
+            const ws = websites.filter(w => w.projectId === p.id);
+            return (
+              <div key={p.id} style={{ padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div><span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{p.name}</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{statusBadge(p.status)}<span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{p.progress}%</span></div>
+                </div>
+                <div style={{ height: 3, background: C.border, borderRadius: 2, marginTop: 6 }}><div style={{ height: '100%', width: `${p.progress}%`, background: C.gold, borderRadius: 2 }} /></div>
+                {ws.map(w => <div key={w.id} style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginTop: 4 }}>🌐 {w.url} — {w.status}</div>)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={id} contacts={contacts} deals={deals} actions={actions} />
+
+      <Modal open={showAddContact} onClose={() => setShowAddContact(false)} title="Neuer Kontakt">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Vorname *"><input style={S.input} value={ctForm.firstName} onChange={e => setCtForm(f => ({ ...f, firstName: e.target.value }))} /></FormRow>
+          <FormRow label="Nachname"><input style={S.input} value={ctForm.lastName} onChange={e => setCtForm(f => ({ ...f, lastName: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={ctForm.email} onChange={e => setCtForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={ctForm.phone} onChange={e => setCtForm(f => ({ ...f, phone: e.target.value }))} /></FormRow>
+          <FormRow label="Position"><input style={S.input} value={ctForm.position} onChange={e => setCtForm(f => ({ ...f, position: e.target.value }))} /></FormRow>
+          <FormRow label="Quelle"><input style={S.input} value={ctForm.source} onChange={e => setCtForm(f => ({ ...f, source: e.target.value }))} /></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAddContact(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveContact} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+
+      <Modal open={showAddDeal} onClose={() => setShowAddDeal(false)} title="Neuer Deal">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Deal-Titel *"><input style={S.input} value={dlForm.title} onChange={e => setDlForm(f => ({ ...f, title: e.target.value }))} /></FormRow>
+          <FormRow label="Kontakt"><select style={S.select} value={dlForm.contactId} onChange={e => setDlForm(f => ({ ...f, contactId: e.target.value }))}><option value="">–</option>{contacts.map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}</select></FormRow>
+          <FormRow label="Service"><select style={S.select} value={dlForm.service} onChange={e => setDlForm(f => ({ ...f, service: e.target.value }))}>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></FormRow>
+          <FormRow label="Volumen (€)"><input style={S.input} type="number" value={dlForm.volume} onChange={e => setDlForm(f => ({ ...f, volume: e.target.value }))} /></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={dlForm.source} onChange={e => setDlForm(f => ({ ...f, source: e.target.value }))}><option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Direkt</option></select></FormRow>
+          <FormRow label="Follow-up"><input style={S.input} type="date" value={dlForm.followUp} onChange={e => setDlForm(f => ({ ...f, followUp: e.target.value }))} /></FormRow>
+        </div>
+        <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={dlForm.notes} onChange={e => setDlForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAddDeal(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveDeal} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — CONTACTS
+// ============================================================================
+const Contacts = ({ data, helpers, actions }) => {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return data.contacts.filter(c => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.position?.toLowerCase().includes(q));
+  }, [data.contacts, search]);
+
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div><h1 style={S.pageTitle}>Kontakte</h1><p style={S.pageSub}>{data.contacts.length} Kontakte</p></div>
+      </div>
+      <div style={{ marginBottom: 16 }}><input style={{ ...S.input, maxWidth: 320 }} placeholder="Kontakte durchsuchen..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+      <div style={S.card}>
+        <table style={S.table}>
+          <thead><tr><th style={S.th}>Name</th><th style={S.th}>Firma</th><th style={S.th}>Position</th><th style={S.th}>E-Mail</th><th style={S.th}>Letzter Kontakt</th><th style={S.th}>Deals</th></tr></thead>
+          <tbody>{filtered.map(c => {
+            const comp = helpers.getCompany(c.companyId);
+            const dls = helpers.contactDeals(c.id);
+            return (
+              <tr key={c.id} style={{ cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = C.bgHover} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <td style={S.td}><Link to={`/contacts/${c.id}`} style={{ ...S.link, fontWeight: 500 }}>{c.firstName} {c.lastName}</Link></td>
+                <td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td>
+                <td style={{ ...S.td, color: C.textDim }}>{c.position}</td>
+                <td style={{ ...S.td, color: C.textDim }}>{c.email}</td>
+                <td style={{ ...S.td, color: C.textDim }}>{c.lastContact && new Date(c.lastContact).toLocaleDateString('de-DE')}</td>
+                <td style={S.td}><Badge variant="purple">{dls.length}</Badge></td>
+              </tr>
+            );
+          })}</tbody>
+        </table>
+        {filtered.length === 0 && <Empty text="Keine Kontakte gefunden" />}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — CONTACT DETAIL
+// ============================================================================
+const ContactDetail = ({ data, helpers, actions }) => {
+  const { id } = useParams();
+  const contact = helpers.getContact(id);
+  const [logOpen, setLogOpen] = useState(false);
+
+  if (!contact) return <div style={S.page}><BackButton to="/contacts" /><Empty text="Kontakt nicht gefunden" /></div>;
+
+  const company = helpers.getCompany(contact.companyId);
+  const deals = helpers.contactDeals(id);
+  const activities = helpers.contactActivities(id);
+
+  return (
+    <div style={S.page}>
+      <BackButton to="/contacts" label="Zurück zu Kontakte" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <h1 style={S.pageTitle}>{contact.firstName} {contact.lastName}</h1>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {contact.position && <Badge>{contact.position}</Badge>}
+            {company && <Link to={`/companies/${company.id}`} style={{ textDecoration: 'none' }}><Badge variant="blue">{company.name}</Badge></Link>}
+          </div>
+        </div>
+        <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Details</h3>
+          {[['E-Mail', contact.email], ['Telefon', contact.phone], ['Quelle', contact.source], ['Letzter Kontakt', contact.lastContact && new Date(contact.lastContact).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l}</span>
+              <span style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{v}</span>
+            </div>
+          ) : null)}
+          <h4 style={{ fontFamily: font.head, fontSize: 16, color: C.text, margin: '16px 0 10px' }}>Deals</h4>
+          {deals.length === 0 ? <Empty text="Keine Deals" /> : deals.map(d => (
+            <Link key={d.id} to={`/deals/${d.id}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}`, textDecoration: 'none' }}>
+              <span style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{d.title}</span>
+              <span style={{ fontFamily: font.body, fontSize: 13, color: C.gold, fontWeight: 500 }}>{d.volume?.toLocaleString('de-DE')}€</span>
+            </Link>
+          ))}
+        </div>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Aktivitäten</h3>
+          <ActivityTimeline activities={activities} />
+        </div>
+      </div>
+
+      <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={contact.companyId} contactId={id} deals={deals} actions={actions} />
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — PIPELINE (Kanban)
+// ============================================================================
+const Pipeline = ({ data, helpers, actions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [dlForm, setDlForm] = useState({ title: '', companyId: '', contactId: '', status: 'Lead', service: 'Website', volume: '', source: '', followUp: '', notes: '' });
+  const availableContacts = useMemo(() => dlForm.companyId ? helpers.companyContacts(dlForm.companyId) : [], [dlForm.companyId, data.contacts]);
+
+  const saveDeal = () => {
+    if (!dlForm.title.trim() || !dlForm.companyId) return;
+    actions.addDeal({ ...dlForm, volume: Number(dlForm.volume) || 0 });
+    setShowAdd(false); setDlForm({ title: '', companyId: '', contactId: '', status: 'Lead', service: 'Website', volume: '', source: '', followUp: '', notes: '' });
+  };
+
+  const activeStages = DEAL_STAGES.filter(s => s !== 'Verloren');
+
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div><h1 style={S.pageTitle}>Pipeline</h1><p style={S.pageSub}>{data.deals.length} Deals • {helpers.pipelineValue().toLocaleString('de-DE')}€ offen</p></div>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Deal</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeStages.length}, 1fr)`, gap: 12, overflowX: 'auto' }}>
+        {activeStages.map(stage => {
+          const stageDeals = data.deals.filter(d => d.status === stage);
+          const stageVal = stageDeals.reduce((s, d) => s + (d.volume || 0), 0);
+          return (
+            <div key={stage} style={{ minWidth: 200 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '0 4px' }}>
+                <span style={{ fontFamily: font.body, fontSize: 12, fontWeight: 600, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stage}</span>
+                <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{stageVal > 0 ? `${stageVal.toLocaleString('de-DE')}€` : '–'}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {stageDeals.map(d => {
+                  const comp = helpers.getCompany(d.companyId);
+                  const isOverdue = d.followUp && new Date(d.followUp) < new Date();
+                  return (
+                    <Link key={d.id} to={`/deals/${d.id}`} style={{ ...S.cardHover, textDecoration: 'none', borderLeft: isOverdue ? `3px solid ${C.orange}` : `3px solid ${C.border}` }}>
+                      <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{d.title}</div>
+                      <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                        <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</span>
+                        {isOverdue && <Badge variant="orange">Überfällig</Badge>}
+                      </div>
+                    </Link>
+                  );
+                })}
+                {stageDeals.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: C.textMuted, fontFamily: font.body, fontSize: 11, border: `1px dashed ${C.border}`, borderRadius: 8 }}>Keine Deals</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Neuer Deal" width={520}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Deal-Titel *"><input style={S.input} value={dlForm.title} onChange={e => setDlForm(f => ({ ...f, title: e.target.value }))} /></FormRow>
+          <FormRow label="Firma *">
+            <select style={S.select} value={dlForm.companyId} onChange={e => setDlForm(f => ({ ...f, companyId: e.target.value, contactId: '' }))}>
+              <option value="">– Firma wählen –</option>
+              {data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Kontakt">
+            <select style={S.select} value={dlForm.contactId} onChange={e => setDlForm(f => ({ ...f, contactId: e.target.value }))} disabled={!dlForm.companyId}>
+              <option value="">– Kontakt wählen –</option>
+              {availableContacts.map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Service"><select style={S.select} value={dlForm.service} onChange={e => setDlForm(f => ({ ...f, service: e.target.value }))}>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></FormRow>
+          <FormRow label="Volumen (€)"><input style={S.input} type="number" value={dlForm.volume} onChange={e => setDlForm(f => ({ ...f, volume: e.target.value }))} /></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={dlForm.source} onChange={e => setDlForm(f => ({ ...f, source: e.target.value }))}><option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Direkt</option></select></FormRow>
+          <FormRow label="Follow-up"><input style={S.input} type="date" value={dlForm.followUp} onChange={e => setDlForm(f => ({ ...f, followUp: e.target.value }))} /></FormRow>
+          <FormRow label="Status"><select style={S.select} value={dlForm.status} onChange={e => setDlForm(f => ({ ...f, status: e.target.value }))}>{DEAL_STAGES.map(s => <option key={s}>{s}</option>)}</select></FormRow>
+        </div>
+        <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={dlForm.notes} onChange={e => setDlForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveDeal} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — DEAL DETAIL
+// ============================================================================
+const DealDetail = ({ data, helpers, actions }) => {
+  const { id } = useParams();
+  const deal = helpers.getDeal(id);
+  const [logOpen, setLogOpen] = useState(false);
+
+  if (!deal) return <div style={S.page}><BackButton to="/pipeline" /><Empty text="Deal nicht gefunden" /></div>;
+
+  const company = helpers.getCompany(deal.companyId);
+  const contact = helpers.getContact(deal.contactId);
+  const activities = helpers.dealActivities(id);
+
+  const changeStage = (stage) => {
+    actions.updateDeal(id, { status: stage });
+    actions.addActivity({ companyId: deal.companyId, contactId: deal.contactId, dealId: id, type: 'Notiz', subject: `Stage → ${stage}`, content: `Deal wurde auf "${stage}" verschoben.` });
+  };
+
+  return (
+    <div style={S.page}>
+      <BackButton to="/pipeline" label="Zurück zur Pipeline" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <h1 style={S.pageTitle}>{deal.title}</h1>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {company && <Link to={`/companies/${company.id}`} style={{ textDecoration: 'none' }}><Badge>{company.name}</Badge></Link>}
+            {contact && <Link to={`/contacts/${contact.id}`} style={{ textDecoration: 'none' }}><Badge variant="blue">{contact.firstName} {contact.lastName}</Badge></Link>}
+            <Badge variant="green">{deal.volume?.toLocaleString('de-DE')}€</Badge>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+        </div>
+      </div>
+
+      {/* Stage Progress Bar */}
+      <div style={{ ...S.card, marginBottom: 24, padding: '16px 20px' }}>
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Deal-Stage</div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {DEAL_STAGES.map(stage => {
+            const isActive = deal.status === stage;
+            const isPast = DEAL_STAGES.indexOf(stage) < DEAL_STAGES.indexOf(deal.status);
+            const isWon = stage === 'Gewonnen';
+            const isLost = stage === 'Verloren';
+            return (
+              <button key={stage} onClick={() => changeStage(stage)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: isActive ? `2px solid ${isWon ? C.green : isLost ? C.red : C.gold}` : `1px solid ${C.border}`, background: isActive ? (isWon ? C.greenDim : isLost ? C.redDim : C.goldDim) : isPast ? C.bgHover : 'transparent', color: isActive ? (isWon ? C.green : isLost ? C.red : C.gold) : isPast ? C.text : C.textMuted, fontFamily: font.body, fontSize: 12, fontWeight: isActive ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
+                {stage}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Log Buttons */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {[['Anruf', Icons.phone, C.green], ['E-Mail', Icons.mail, C.blue], ['Loom', Icons.video, C.purple], ['Meeting', Icons.calendar, C.orange]].map(([type, icon, col]) => (
+          <button key={type} onClick={() => { actions.addActivity({ companyId: deal.companyId, contactId: deal.contactId, dealId: id, type, subject: `${type} geloggt`, content: `Schnell-Log: ${type}` }); }} style={{ ...S.btn, ...S.btnGhost, borderColor: col, color: col }}>
+            {React.cloneElement(icon, { size: 14, color: col })} {type}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Details</h3>
+          {[['Service', deal.service], ['Quelle', deal.source], ['Follow-up', deal.followUp && new Date(deal.followUp).toLocaleDateString('de-DE')], ['Erstellt', deal.created && new Date(deal.created).toLocaleDateString('de-DE')]].map(([l, v]) => v ? (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l}</span>
+              <span style={{ fontFamily: font.body, fontSize: 12, color: C.text }}>{v}</span>
+            </div>
+          ) : null)}
+          {deal.notes && <div style={{ marginTop: 12, fontFamily: font.body, fontSize: 12, color: C.textDim, padding: 10, background: C.bgHover, borderRadius: 6 }}>{deal.notes}</div>}
+        </div>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Aktivitäten</h3>
+          <ActivityTimeline activities={activities} />
+        </div>
+      </div>
+
+      <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={deal.companyId} contactId={deal.contactId} dealId={id} contacts={company ? helpers.companyContacts(company.id) : []} deals={[deal]} actions={actions} />
+    </div>
+  );
+};
+
+// ============================================================================
+// PAGES — PROJECTS
+// ============================================================================
+const Projects = ({ data, helpers, actions }) => (
+  <div style={S.page}>
+    <h1 style={S.pageTitle}>Projekte</h1>
+    <p style={{ ...S.pageSub, marginBottom: 24 }}>{data.projects.length} Projekte</p>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+      {data.projects.map(p => {
+        const comp = helpers.getCompany(p.companyId);
+        const ws = data.websites.filter(w => w.projectId === p.id);
+        return (
+          <div key={p.id} style={S.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontFamily: font.body, fontSize: 14, fontWeight: 500, color: C.text }}>{p.name}</span>
+              {statusBadge(p.status)}
+            </div>
+            {comp && <Link to={`/companies/${comp.id}`} style={{ ...S.link, fontSize: 12 }}>{comp.name}</Link>}
+            <div style={{ height: 4, background: C.border, borderRadius: 2, margin: '12px 0 6px' }}><div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2 }} /></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{p.progress}% abgeschlossen</span>
+              {p.deadline && <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{new Date(p.deadline).toLocaleDateString('de-DE')}</span>}
+            </div>
+            {ws.map(w => <div key={w.id} style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, marginTop: 6 }}>🌐 {w.url}</div>)}
+            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+              {[0, 25, 50, 75, 100].map(v => (
+                <button key={v} onClick={() => actions.updateProject(p.id, { progress: v, status: v === 100 ? 'Fertig' : v > 0 ? 'In Arbeit' : 'Planung' })} style={{ ...S.btn, padding: '4px 8px', fontSize: 10, ...(p.progress === v ? S.btnGold : S.btnGhost) }}>{v}%</button>
+              ))}
+            </div>
+          </div>
+        );
       })}
     </div>
-  </div>);
+  </div>
+);
 
-  /* ═══ CONTACTS ═══ */
-  const ContactsPage=()=>(<div className="fade">
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <span style={{color:C.muted,fontSize:12}}>{D.contacts.length} Kontakte</span><Btn sm onClick={()=>openM("contact")}>+ Kontakt</Btn>
+// ============================================================================
+// PAGES — WEBSITES
+// ============================================================================
+const Websites = ({ data, helpers }) => (
+  <div style={S.page}>
+    <h1 style={S.pageTitle}>Websites</h1>
+    <p style={{ ...S.pageSub, marginBottom: 24 }}>{data.websites.length} Websites</p>
+    <div style={S.card}>
+      <table style={S.table}><thead><tr><th style={S.th}>Name</th><th style={S.th}>URL</th><th style={S.th}>Firma</th><th style={S.th}>Status</th><th style={S.th}>Hosting</th><th style={S.th}>Footer-Link</th></tr></thead>
+        <tbody>{data.websites.map(w => {
+          const comp = helpers.getCompany(w.companyId);
+          return <tr key={w.id}><td style={S.td}>{w.name}</td><td style={{ ...S.td, color: C.gold }}>{w.url}</td><td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td><td style={S.td}>{statusBadge(w.status)}</td><td style={{ ...S.td, color: C.textDim }}>{w.hosting}</td><td style={S.td}>{w.footerLink ? '✓' : '–'}</td></tr>;
+        })}</tbody></table>
     </div>
-    {D.contacts.length===0?<Empty text="Noch keine Kontakte"/>:D.contacts.map(c=><Card key={c.id} onClick={()=>openM("contact",c)} sx={{marginBottom:6,padding:14}}>
-      <div style={{display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:38,height:38,borderRadius:19,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:13,fontWeight:700,flexShrink:0}}>{c.firstName?.[0]}{c.lastName?.[0]}</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{color:C.white,fontSize:13,fontWeight:600}}>{c.firstName} {c.lastName}</div>
-          <div style={{color:C.muted,fontSize:11}}>{c.company}{c.email?` · ${c.email}`:""}</div>
-        </div>
-        {c.lastContact&&<span style={{color:C.dim,fontSize:10,flexShrink:0}}>{fdt(c.lastContact)}</span>}
-      </div>
-    </Card>)}
-  </div>);
+  </div>
+);
 
-  /* ═══ OUTREACH ═══ */
-  const OutreachPage=()=>{
-    const[sub,setSub]=useState("warmup");const O=D.outreach;
-    const subs=[{id:"warmup",l:"Warmup & Domains"},{id:"seq",l:"Sequenzen"},{id:"lists",l:"Kontaktlisten"},{id:"looms",l:"Looms"}];
+// ============================================================================
+// PAGES — TASKS
+// ============================================================================
+const Tasks = ({ data, actions }) => {
+  const [filter, setFilter] = useState('Alle');
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ text: '', priority: 'mittel', category: 'Admin', due: '' });
 
-    return(<div className="fade">
-      <div style={{display:"flex",gap:4,marginBottom:16,overflowX:"auto"}}>
-        {subs.map(s=><button key={s.id} onClick={()=>setSub(s.id)} style={{padding:"6px 14px",fontSize:11,fontWeight:600,borderRadius:6,cursor:"pointer",background:sub===s.id?C.accentDim:"transparent",color:sub===s.id?C.accent:C.muted,border:`1px solid ${sub===s.id?C.accentSoft:C.border}`,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>{s.l}</button>)}
-      </div>
-      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-        <Stat label="Gesendet" value={O.stats.totalSent} color={C.cyan} icon="✉"/>
-        <Stat label="Geöffnet" value={O.stats.opened} sub={O.stats.totalSent>0?`${pct((O.stats.opened/O.stats.totalSent)*100)} Rate`:""} color={C.blue}/>
-        <Stat label="Antworten" value={O.stats.replied} color={C.green}/>
-        <Stat label="Leads" value={O.stats.leads} color={C.accent} icon="★"/>
-      </div>
+  const cats = ['Alle', ...TASK_CATEGORIES];
+  const filtered = filter === 'Alle' ? data.tasks : data.tasks.filter(t => t.category === filter);
+  const sorted = [...filtered].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
 
-      {sub==="warmup"&&<Section title="E-MAIL DOMAINS & WARMUP STATUS">
-        {O.domains.map(dom=>{const wp=dom.warmupTarget>0?(dom.warmupDay/dom.warmupTarget)*100:0;const sc=dom.status==="Bereit"?C.green:dom.status==="Warmup"?C.orange:C.red;
-          return(<Card key={dom.id} sx={{marginBottom:10,padding:16}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <div><div style={{color:C.white,fontSize:14,fontWeight:600}}>{dom.domain}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{dom.provider} · {dom.mailboxes.length} Postfächer</div></div>
-              <Badge color={sc}>{dom.status}</Badge>
-            </div>
-            <div style={{display:"flex",gap:8,marginBottom:12}}>
-              {["SPF","DKIM","DMARC"].map(r=><div key={r} style={{flex:1,background:C.panel,borderRadius:6,padding:"6px 10px",textAlign:"center"}}>
-                <div style={{color:C.dim,fontSize:9}}>{r}</div>
-                <div style={{color:dom.dns?.[r.toLowerCase()]?C.green:C.dim,fontSize:12,fontWeight:600}}>{dom.dns?.[r.toLowerCase()]?"✓":"—"}</div>
-              </div>)}
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.muted,marginBottom:4}}><span>Warmup: Tag {dom.warmupDay}/{dom.warmupTarget}</span><span>{pct(wp)}</span></div>
-            <Progress value={wp} color={wp>=100?C.green:C.orange} h={8}/>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:10}}>
-              {dom.mailboxes.map((mb,i)=><div key={i} style={{background:C.panel,borderRadius:6,padding:"8px 10px"}}>
-                <div style={{color:C.off,fontSize:11,marginBottom:3}}>{mb.email}</div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:10}}><span style={{color:C.dim}}>Health: <span style={{color:mb.health>80?C.green:mb.health>50?C.orange:C.dim}}>{mb.health||"—"}%</span></span><span style={{color:C.dim}}>Limit: {mb.dailyLimit||"—"}/Tag</span></div>
-              </div>)}
-            </div>
-            <div style={{display:"flex",gap:6,marginTop:10}}>
-              {dom.status==="Nicht eingerichtet"&&<Btn sm onClick={()=>upd("outreach",o=>({...o,domains:o.domains.map(d=>d.id===dom.id?{...d,status:"Warmup",warmupDay:1,dns:{spf:true,dkim:true,dmarc:true},mailboxes:d.mailboxes.map(m=>({...m,health:15,dailyLimit:10}))}:d)}))}>DNS eingerichtet ✓ Warmup starten</Btn>}
-              {dom.status==="Warmup"&&<Btn sm onClick={()=>upd("outreach",o=>({...o,domains:o.domains.map(d=>d.id===dom.id?{...d,warmupDay:Math.min(d.warmupDay+1,d.warmupTarget),status:d.warmupDay+1>=d.warmupTarget?"Bereit":"Warmup",mailboxes:d.mailboxes.map(m=>({...m,health:Math.min(98,m.health+4),dailyLimit:Math.min(50,m.dailyLimit+2)}))}:d)}))}>+1 Warmup Tag</Btn>}
-              {dom.status==="Bereit"&&<Badge color={C.green}>Versandbereit ✓</Badge>}
-            </div>
-          </Card>);
-        })}
-      </Section>}
-
-      {sub==="seq"&&<Section title="E-MAIL SEQUENZEN">
-        {O.sequences.map(seq=><Card key={seq.id} sx={{marginBottom:10,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div><div style={{color:C.white,fontSize:14,fontWeight:600}}>{seq.name}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{seq.emails.length} Steps · Delay: {seq.delay}</div></div>
-            <Badge color={seq.status==="Aktiv"?C.green:C.orange}>{seq.status}</Badge>
-          </div>
-          {seq.emails.map((em,i)=><div key={i} style={{background:C.panel,borderRadius:8,padding:12,marginBottom:6}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-              <div style={{width:24,height:24,borderRadius:12,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:11,fontWeight:700}}>{em.step}</div>
-              <span style={{color:C.off,fontSize:12,fontWeight:600}}>{em.subject}</span>
-            </div>
-            <div style={{color:C.dim,fontSize:11,whiteSpace:"pre-wrap",lineHeight:1.5,paddingLeft:32}}>{em.body}</div>
-          </div>)}
-        </Card>)}
-      </Section>}
-
-      {sub==="lists"&&<Section title="KONTAKTLISTEN (Outscraper)" right={<Btn sm onClick={()=>openM("list")}>+ Liste</Btn>}>
-        {O.contactLists.map(cl=><Card key={cl.id} sx={{marginBottom:8,padding:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div><div style={{color:C.white,fontSize:13,fontWeight:600}}>{cl.name}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{cl.count} Kontakte · {cl.source} · {fdt(cl.created)}</div></div>
-            <Badge color={cl.count>0?C.green:C.orange}>{cl.status}</Badge>
-          </div>
-        </Card>)}
-      </Section>}
-
-      {sub==="looms"&&<div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:10,marginBottom:16}}>
-          <Card><div style={{color:C.dim,fontSize:10}}>Gesendet</div><div style={{color:C.purple,fontSize:20,fontWeight:700}}>{O.looms.sent}</div></Card>
-          <Card><div style={{color:C.dim,fontSize:10}}>Angesehen</div><div style={{color:C.blue,fontSize:20,fontWeight:700}}>{O.looms.viewed}</div></Card>
-          <Card><div style={{color:C.dim,fontSize:10}}>Geantwortet</div><div style={{color:C.green,fontSize:20,fontWeight:700}}>{O.looms.replied}</div></Card>
-          <Card><div style={{color:C.dim,fontSize:10}}>Ø Länge</div><div style={{color:C.off,fontSize:20,fontWeight:700}}>{O.looms.avgLength}</div></Card>
-        </div>
-        <Card sx={{padding:16}}>
-          <div style={{color:C.white,fontSize:14,fontWeight:600,marginBottom:12}}>Loom-Skript (2-3 Min.)</div>
-          <div style={{color:C.off,fontSize:12,lineHeight:1.8}}>
-            <div style={{color:C.accent,fontWeight:600,marginBottom:2}}>0:00 — Begrüßung (10s)</div>
-            <div style={{paddingLeft:16,marginBottom:8}}>"Hi, ich bin [Name] von ELEVO. Ich habe mir die Website von [Firma] angeschaut und mir sind ein paar Dinge aufgefallen."</div>
-            <div style={{color:C.accent,fontWeight:600,marginBottom:2}}>0:10 — Analyse am Bildschirm (90s)</div>
-            <div style={{paddingLeft:16,marginBottom:8}}>Website aufrufen → 2-3 konkrete Schwachstellen zeigen (Mobile, Speed, Design, fehlende Elemente). Keine generischen Tipps, nur spezifische Beobachtungen.</div>
-            <div style={{color:C.accent,fontWeight:600,marginBottom:2}}>1:40 — Angebot (20s)</div>
-            <div style={{paddingLeft:16,marginBottom:8}}>"Wenn das interessant klingt, meld dich einfach. Ich zeig dir gerne in einem kurzen Gespräch, was möglich wäre. Kein Verkaufsdruck."</div>
-            <div style={{background:C.accentDim,borderRadius:6,padding:10,marginTop:8}}>
-              <div style={{color:C.accent,fontSize:11,fontWeight:600}}>Regel: Erste Aufnahme = Finale Aufnahme. Nicht perfektionieren!</div>
-            </div>
-          </div>
-        </Card>
-      </div>}
-    </div>);
+  const save = () => {
+    if (!form.text.trim()) return;
+    actions.addTask(form);
+    setShowAdd(false); setForm({ text: '', priority: 'mittel', category: 'Admin', due: '' });
   };
 
-  /* ═══ GOOGLE ADS ═══ */
-  const AdsPage=()=>{
-    const A=D.ads;const ts=A.campaigns.reduce((s,c)=>s+c.spent,0);const tc=A.campaigns.reduce((s,c)=>s+c.clicks,0);
-    const ti=A.campaigns.reduce((s,c)=>s+c.impressions,0);const tv=A.campaigns.reduce((s,c)=>s+c.conversions,0);
-    return(<div className="fade">
-      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-        <Stat label="Ausgegeben" value={eur(ts)} sub={`von ${eur(A.budget)}`} color={C.blue}/>
-        <Stat label="Klicks" value={tc} sub={ti>0?`CTR: ${pct((tc/ti)*100)}`:""} color={C.cyan}/>
-        <Stat label="Ø CPC" value={tc>0?eur(ts/tc):"–"} color={C.orange}/>
-        <Stat label="Conversions" value={tv} color={C.green} icon="★"/>
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div><h1 style={S.pageTitle}>Tasks</h1><p style={S.pageSub}>{data.tasks.filter(t => !t.done).length} offen von {data.tasks.length}</p></div>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Task</button>
       </div>
-      <Section title="EINSTELLUNGEN">
-        <Card sx={{padding:16,marginBottom:16}}>
-          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr 1fr 1fr",gap:16}}>
-            <div><div style={{color:C.dim,fontSize:10}}>Region</div><div style={{color:C.off,fontSize:13}}>{A.settings.region}</div></div>
-            <div><div style={{color:C.dim,fontSize:10}}>Ausgeschlossen</div><div style={{color:C.red,fontSize:13}}>{A.settings.excluded}</div></div>
-            <div><div style={{color:C.dim,fontSize:10}}>Zeitplan</div><div style={{color:C.off,fontSize:13}}>{A.settings.schedule}</div></div>
-            <div><div style={{color:C.dim,fontSize:10}}>Budget/Monat</div><div style={{color:C.accent,fontSize:13,fontWeight:700}}>{eur(A.budget)}</div></div>
-          </div>
-        </Card>
-      </Section>
-      <Section title="NEGATIVE KEYWORDS">
-        <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:16}}>
-          {A.negativeKeywords.map((k,i)=><span key={i} style={{padding:"3px 10px",borderRadius:20,background:C.red+"15",color:C.red,fontSize:11}}>-{k}</span>)}
-        </div>
-      </Section>
-      <Section title="KAMPAGNEN" right={<Btn sm onClick={()=>openM("adCamp")}>+ Kampagne</Btn>}>
-        {A.campaigns.map(camp=><Card key={camp.id} sx={{marginBottom:12,padding:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div><div style={{color:C.white,fontSize:14,fontWeight:600}}>{camp.name}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{camp.type} · {eur(camp.budget)}/Monat</div></div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <Badge color={camp.status==="Live"?C.green:camp.status==="Pausiert"?C.orange:C.muted}>{camp.status}</Badge>
-              {camp.status==="Entwurf"&&<Btn sm onClick={()=>upd("ads",a=>({...a,campaigns:a.campaigns.map(c=>c.id===camp.id?{...c,status:"Live"}:c)}))}>Aktivieren</Btn>}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {cats.map(c => <button key={c} onClick={() => setFilter(c)} style={{ ...S.btn, padding: '6px 12px', fontSize: 12, ...(filter === c ? S.btnGold : S.btnGhost) }}>{c}</button>)}
+      </div>
+      <div style={S.card}>
+        {sorted.map(t => (
+          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderBottom: `1px solid ${C.border}`, opacity: t.done ? 0.5 : 1 }}>
+            <button onClick={() => actions.toggleTask(t.id)} style={{ width: 20, height: 20, borderRadius: 4, border: `1.5px solid ${t.done ? C.green : C.border}`, background: t.done ? C.greenDim : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {t.done && React.cloneElement(Icons.check, { size: 12, color: C.green })}
+            </button>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontFamily: font.body, fontSize: 13, color: C.text, textDecoration: t.done ? 'line-through' : 'none' }}>{t.text}</span>
             </div>
+            <Badge variant={t.priority === 'hoch' ? 'red' : t.priority === 'mittel' ? 'orange' : 'default'}>{t.priority}</Badge>
+            <Badge variant="purple">{t.category}</Badge>
+            {t.due && <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date(t.due).toLocaleDateString('de-DE')}</span>}
+            <button onClick={() => actions.deleteTask(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>{React.cloneElement(Icons.trash, { size: 14, color: C.textMuted })}</button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:12}}>
-            {[{l:"Spent",v:eur(camp.spent)},{l:"Impr.",v:camp.impressions},{l:"Klicks",v:camp.clicks},{l:"CTR",v:pct(camp.ctr)},{l:"Conv.",v:camp.conversions}].map((s,i)=>
-              <div key={i} style={{background:C.panel,borderRadius:6,padding:"5px 6px",textAlign:"center"}}><div style={{color:C.dim,fontSize:9}}>{s.l}</div><div style={{color:C.off,fontSize:12,fontWeight:600}}>{s.v}</div></div>
-            )}
+        ))}
+        {sorted.length === 0 && <Empty text="Keine Tasks" />}
+      </div>
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Neuer Task">
+        <FormRow label="Aufgabe *"><input style={S.input} value={form.text} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} /></FormRow>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <FormRow label="Priorität"><select style={S.select} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}><option>niedrig</option><option>mittel</option><option>hoch</option></select></FormRow>
+          <FormRow label="Kategorie"><select style={S.select} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>{TASK_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></FormRow>
+          <FormRow label="Fällig"><input style={S.input} type="date" value={form.due} onChange={e => setForm(f => ({ ...f, due: e.target.value }))} /></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+// ============================================================================
+// PLACEHOLDER PAGES (to be expanded in Part 2)
+// ============================================================================
+const PlaceholderPage = ({ title, icon, children }) => (
+  <div style={S.page}>
+    <h1 style={S.pageTitle}>{title}</h1>
+    <div style={{ marginTop: 20 }}>{children}</div>
+  </div>
+);
+
+const Outreach = ({ data }) => (
+  <PlaceholderPage title="Cold Outreach">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+      <div style={S.card}>
+        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Domains & Postfächer</h3>
+        {data.outreach.domains.map((d, i) => (
+          <div key={i} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{d.name}</div>
+            <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{d.mailboxes.join(', ')}</div>
+            <Badge variant="green">{d.warmup}</Badge>
           </div>
-          <div style={{color:C.muted,fontSize:11,fontWeight:600,marginBottom:6}}>Keywords</div>
-          {camp.keywords.map((kw,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 10px",background:C.panel,borderRadius:6,marginBottom:3}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:C.off,fontSize:12}}>{kw.keyword}</span><Badge color={C.dim}>{kw.matchType}</Badge></div>
-            <span style={{color:C.dim,fontSize:11}}>Bid: {eur(kw.bid)}</span>
-          </div>)}
-        </Card>)}
-      </Section>
-    </div>);
-  };
-
-  /* ═══ PROJECTS ═══ */
-  const ProjectsPage=()=>(<div className="fade">
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <span style={{color:C.muted,fontSize:12}}>{D.projects.length} Projekte</span><Btn sm onClick={()=>openM("project")}>+ Projekt</Btn>
-    </div>
-    {D.projects.map(p=><Card key={p.id} onClick={()=>openM("project",p)} sx={{marginBottom:8,padding:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-        <div><div style={{color:C.white,fontSize:14,fontWeight:600}}>{p.name}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{p.client} · Deadline: {fdt(p.deadline)}</div></div>
-        <Badge color={PROJ_C[p.status]||C.muted}>{p.status}</Badge>
+        ))}
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:10}}><Progress value={p.progress} color={PROJ_C[p.status]||C.accent}/><span style={{color:C.muted,fontSize:11,flexShrink:0}}>{p.progress}%</span></div>
-    </Card>)}
-  </div>);
-
-  /* ═══ WEBSITES ═══ */
-  const WebsitesPage=()=>(<div className="fade">
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <span style={{color:C.muted,fontSize:12}}>{D.websites.length} Websites</span><Btn sm onClick={()=>openM("website")}>+ Website</Btn>
-    </div>
-    {D.websites.map(w=><Card key={w.id} onClick={()=>openM("website",w)} sx={{marginBottom:8,padding:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div><div style={{color:C.white,fontSize:14,fontWeight:600}}>{w.name}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{w.url} · {w.hosting}{w.footerLink?" · Footer-Link ✓":""}</div></div>
-        <Badge color={WEB_C[w.status]||C.muted}>{w.status}</Badge>
-      </div>
-    </Card>)}
-  </div>);
-
-  /* ═══ TASKS ═══ */
-  const TasksPage=()=>{
-    const cats=["Alle",...new Set(D.tasks.map(t=>t.category))];const[filter,setFilter]=useState("Alle");
-    const filtered=filter==="Alle"?D.tasks:D.tasks.filter(t=>t.category===filter);
-    const toggle=id=>upd("tasks",ts=>ts.map(t=>t.id===id?{...t,done:!t.done}:t));
-    const done=filtered.filter(t=>t.done).length;
-    return(<div className="fade">
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-        <div style={{display:"flex",gap:4,overflowX:"auto"}}>{cats.map(c=><button key={c} onClick={()=>setFilter(c)} style={{padding:"5px 12px",fontSize:11,borderRadius:6,cursor:"pointer",background:filter===c?C.accentDim:"transparent",color:filter===c?C.accent:C.muted,border:`1px solid ${filter===c?C.accentSoft:C.border}`,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>{c}</button>)}</div>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{color:C.muted,fontSize:11}}>{done}/{filtered.length} erledigt</span>
-          <Btn sm onClick={()=>openM("task")}>+ Task</Btn>
-        </div>
-      </div>
-      {[...filtered.filter(t=>!t.done),...filtered.filter(t=>t.done)].map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,marginBottom:4,opacity:t.done?.5:1}}>
-        <div onClick={()=>toggle(t.id)} style={{width:18,height:18,borderRadius:4,border:`2px solid ${t.done?C.green:t.priority==="Hoch"?C.red:C.accent}`,background:t.done?C.green+"30":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.green,flexShrink:0}}>{t.done&&"✓"}</div>
-        <div style={{flex:1}}><div style={{color:t.done?C.dim:C.off,fontSize:12,textDecoration:t.done?"line-through":"none"}}>{t.text}</div>{t.due&&<span style={{color:C.dim,fontSize:10}}>Bis: {fdt(t.due)}</span>}</div>
-        <div style={{display:"flex",gap:4,flexShrink:0}}>
-          <Badge color={t.priority==="Hoch"?C.red:t.priority==="Mittel"?C.orange:C.dim}>{t.priority}</Badge>
-          <Badge color={t.category==="Outreach"?C.cyan:t.category==="Ads"?C.blue:t.category==="Vertrieb"?C.purple:C.accent}>{t.category}</Badge>
-        </div>
-      </div>)}
-    </div>);
-  };
-
-  /* ═══ SOPs ═══ */
-  const SOPsPage=()=>{
-    const[active,setActive]=useState(null);
-    const toggleStep=(sopId,stepId)=>upd("sops",ss=>ss.map(s=>s.id===sopId?{...s,steps:s.steps.map(st=>st.id===stepId?{...st,done:!st.done}:st)}:s));
-    const resetSop=id=>upd("sops",ss=>ss.map(s=>s.id===id?{...s,steps:s.steps.map(st=>({...st,done:false}))}:s));
-    return(<div className="fade">
-      <Section title="STANDARD-PROZESSE (SOPs)">
-        <div style={{color:C.dim,fontSize:11,marginBottom:16}}>Wiederholbare Checklisten für konsistente Qualität. Nutze "Reset" um sie für den nächsten Durchlauf zurückzusetzen.</div>
-        {D.sops.map(sop=>{const done=sop.steps.filter(s=>s.done).length;const total=sop.steps.length;const isOpen=active===sop.id;
-          return(<Card key={sop.id} sx={{marginBottom:8,padding:0,overflow:"hidden"}}>
-            <div onClick={()=>setActive(isOpen?null:sop.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:16,cursor:"pointer"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{color:C.off,fontSize:14,fontWeight:600}}>{sop.name}</div>
-                <Badge color={sop.category==="Vertrieb"?C.purple:sop.category==="Delivery"?C.accent:sop.category==="Outreach"?C.cyan:C.blue}>{sop.category}</Badge>
+      <div style={S.card}>
+        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Sequenzen</h3>
+        {data.outreach.sequences.map((s, i) => (
+          <div key={i}>
+            <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>{s.name}</div>
+            {s.steps.map((st, j) => (
+              <div key={j} style={{ padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontFamily: font.body, fontSize: 12, color: C.textDim }}>
+                Tag {st.day}: {st.subject}
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{color:done===total?C.green:C.muted,fontSize:11}}>{done}/{total}</span>
-                <span style={{color:C.dim,fontSize:14,transform:isOpen?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
-              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div style={S.card}>
+        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Kontaktlisten</h3>
+        {data.outreach.lists.map((l, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{l.name}</span>
+            <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l.count} Kontakte • {l.source}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </PlaceholderPage>
+);
+
+const Ads = ({ data }) => (
+  <PlaceholderPage title="Google Ads">
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+      <StatCard label="Budget" value={`${data.ads.budget}€`} sub="pro Monat" />
+      <StatCard label="Region" value={data.ads.region} sub={`Ausgeschlossen: ${data.ads.excluded.join(', ')}`} color={C.blue} />
+    </div>
+    <div style={S.card}>
+      <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Kampagnen</h3>
+      <table style={S.table}><thead><tr><th style={S.th}>Kampagne</th><th style={S.th}>Status</th><th style={S.th}>Budget</th><th style={S.th}>Klicks</th><th style={S.th}>Impressions</th><th style={S.th}>CTR</th><th style={S.th}>Conv.</th></tr></thead>
+        <tbody>{data.ads.campaigns.map((c, i) => (
+          <tr key={i}><td style={S.td}>{c.name}</td><td style={S.td}>{statusBadge(c.status)}</td><td style={{ ...S.td, color: C.gold }}>{c.budget}€</td><td style={S.td}>{c.clicks}</td><td style={S.td}>{c.impressions}</td><td style={S.td}>{c.ctr}%</td><td style={S.td}>{c.conversions}</td></tr>
+        ))}</tbody></table>
+    </div>
+    <div style={{ ...S.card, marginTop: 16 }}>
+      <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Negative Keywords</h3>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {data.ads.negativeKeywords.map((k, i) => <Badge key={i} variant="red">{k}</Badge>)}
+      </div>
+    </div>
+  </PlaceholderPage>
+);
+
+const SOPs = ({ data }) => (
+  <PlaceholderPage title="SOPs">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+      {data.sops.map(s => (
+        <div key={s.id} style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>{s.title}</h3>
+          {s.steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
+              <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{step}</span>
             </div>
-            {isOpen&&<div style={{borderTop:`1px solid ${C.border}`,padding:16}}>
-              <div style={{marginBottom:12}}><Progress value={(done/total)*100} color={done===total?C.green:C.accent}/></div>
-              {sop.steps.map(st=><div key={st.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0"}}>
-                <div onClick={()=>toggleStep(sop.id,st.id)} style={{width:18,height:18,borderRadius:4,border:`2px solid ${st.done?C.green:C.border}`,background:st.done?C.green+"30":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.green,flexShrink:0}}>{st.done&&"✓"}</div>
-                <span style={{color:st.done?C.dim:C.off,fontSize:12,textDecoration:st.done?"line-through":"none"}}>{st.text}</span>
-              </div>)}
-              <div style={{marginTop:12}}><Btn sm ghost onClick={()=>resetSop(sop.id)}>↻ Reset für nächsten Durchlauf</Btn></div>
-            </div>}
-          </Card>);
-        })}
-      </Section>
-    </div>);
-  };
+          ))}
+        </div>
+      ))}
+    </div>
+  </PlaceholderPage>
+);
 
-  /* ═══ FINANCES ═══ */
-  const FinancesPage=()=>{
-    const F=D.finances;const tc=Object.values(F.monthly).reduce((s,v)=>s+v,0);
-    return(<div className="fade">
-      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-        <Stat label="Kosten/Monat" value={eur(tc)} color={C.red} icon="◇"/>
-        <Stat label="Umsatz" value={eur(F.revenue)} color={C.green} icon="★"/>
-        <Stat label="Ergebnis" value={eur(F.revenue-tc)} color={F.revenue-tc>=0?C.green:C.red}/>
-        <Stat label="Break-Even" value={`${Math.ceil(tc/1500*30)} Tage`} sub="bei 1.500€/Auftrag" color={C.accent}/>
+const Finances = ({ data }) => {
+  const total = data.finances.fixcosts.reduce((s, f) => s + f.amount, 0);
+  return (
+    <PlaceholderPage title="Finanzen">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
+        <StatCard label="Fixkosten / Monat" value={`${total}€`} color={C.red} />
+        <StatCard label="Fixkosten / Jahr" value={`${(total * 12).toLocaleString('de-DE')}€`} color={C.orange} />
+        <StatCard label="Break-Even" value={`${Math.ceil(total / 500)} Deals`} sub="bei Ø 500€ / Deal" color={C.green} />
       </div>
-      <Section title="MONATLICHE FIXKOSTEN">
-        {Object.entries(F.monthly).map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,marginBottom:4}}>
-          <span style={{color:C.off,fontSize:13}}>{k==="ads"?"Google Ads":k==="workspace"?"Google Workspace":k==="instantly"?"Instantly.ai":k==="domains"?"Domains (3x)":k==="outscraper"?"Outscraper":k==="loom"?"Loom":"—"}</span>
-          <span style={{color:C.accent,fontSize:14,fontWeight:700}}>{eur(v)}</span>
-        </div>)}
-        <div style={{display:"flex",justifyContent:"space-between",padding:"12px 14px",background:C.accentDim,borderRadius:8,marginTop:8}}>
-          <span style={{color:C.accent,fontSize:13,fontWeight:700}}>Gesamt</span>
-          <span style={{color:C.accent,fontSize:16,fontWeight:700}}>{eur(tc)}/Monat</span>
-        </div>
-      </Section>
-      <Section title="BREAK-EVEN">
-        <Card sx={{padding:16}}>
-          <div style={{color:C.off,fontSize:12,lineHeight:2}}>
-            Monatliche Kosten: <strong style={{color:C.red}}>{eur(tc)}</strong><br/>
-            Ø Auftragswert: <strong style={{color:C.accent}}>~{eur(1500)}</strong><br/>
-            → <strong style={{color:C.green}}>1 Auftrag deckt ~{Math.round(1500/tc)} Monate</strong> Betriebskosten<br/>
-            → Erster Kunde = sofort profitabel
-          </div>
-        </Card>
-      </Section>
-    </div>);
-  };
-
-  /* ═══ NOTES ═══ */
-  const NotesPage=()=>{
-    const[text,setText]=useState("");
-    const add=()=>{if(!text.trim())return;upd("notes",n=>[...n,{id:nid(),text,date:new Date().toISOString()}]);setText("")};
-    return(<div className="fade">
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
-        <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Notiz hinzufügen..." rows={2} onKeyDown={e=>{if(e.key==="Enter"&&e.metaKey)add()}} style={{flex:1,padding:"10px 14px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,color:C.white,fontSize:13,fontFamily:"'DM Sans',sans-serif",resize:"vertical"}}/>
-        <Btn onClick={add} sx={{alignSelf:"flex-end"}}>Speichern</Btn>
+      <div style={S.card}>
+        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Fixkosten</h3>
+        <table style={S.table}><thead><tr><th style={S.th}>Posten</th><th style={S.th}>Kategorie</th><th style={S.th}>Betrag</th></tr></thead>
+          <tbody>{data.finances.fixcosts.map((f, i) => (
+            <tr key={i}><td style={S.td}>{f.name}</td><td style={S.td}><Badge>{f.category}</Badge></td><td style={{ ...S.td, fontWeight: 600, color: f.amount > 0 ? C.red : C.textDim }}>{f.amount}€</td></tr>
+          ))}</tbody></table>
       </div>
-      {D.notes.length===0?<Empty text="Keine Notizen"/>:[...D.notes].reverse().map(n=><Card key={n.id} sx={{marginBottom:6,padding:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{color:C.dim,fontSize:10}}>{new Date(n.date).toLocaleString("de-DE")}</span>
-          <div onClick={()=>upd("notes",ns=>ns.filter(x=>x.id!==n.id))} style={{cursor:"pointer",color:C.dim,fontSize:12}}>✕</div>
+    </PlaceholderPage>
+  );
+};
+
+const Notes = ({ data, actions }) => {
+  const [text, setText] = useState('');
+  const [title, setTitle] = useState('');
+  return (
+    <PlaceholderPage title="Notizen">
+      <div style={{ ...S.card, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+          <input style={{ ...S.input, flex: 1 }} placeholder="Titel..." value={title} onChange={e => setTitle(e.target.value)} />
+          <button onClick={() => { if (title.trim()) { actions.addNote({ title, content: text }); setTitle(''); setText(''); } }} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
         </div>
-        <div style={{color:C.off,fontSize:12,whiteSpace:"pre-wrap"}}>{n.text}</div>
-      </Card>)}
-    </div>);
-  };
-
-  /* ═══ SETTINGS ═══ */
-  const SettingsPage=()=>{
-    const[newPin,setNewPin]=useState("");
-    return(<div className="fade">
-      <Section title="KI-ASSISTENT">
-        <Card sx={{padding:16}}>
-          <div style={{color:C.off,fontSize:12,marginBottom:10}}>Claude API-Key für den eingebauten KI-Assistenten. Dein Key wird nur lokal gespeichert.</div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <input type="password" value={apiKey} onChange={e=>saveApiKey(e.target.value)} placeholder="sk-ant-..." style={{flex:1,padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,color:C.white,fontSize:12,fontFamily:"'DM Sans',sans-serif"}}/>
-            {apiKey&&<Badge color={C.green}>Verbunden</Badge>}
-          </div>
-          {!apiKey&&<div style={{color:C.orange,fontSize:10,marginTop:6}}>Ohne API-Key ist der KI-Assistent deaktiviert. Hol dir deinen Key auf console.anthropic.com</div>}
-        </Card>
-      </Section>
-      <Section title="SICHERHEIT">
-        <Card sx={{padding:16}}>
-          <div style={{color:C.off,fontSize:12,marginBottom:10}}>PIN-Schutz: {D.pin?"Aktiv ✓":"Nicht gesetzt"}</div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <input type="password" value={newPin} onChange={e=>setNewPin(e.target.value)} placeholder={D.pin?"Neuer PIN":"PIN setzen"} maxLength={8} style={{width:150,padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,color:C.white,fontSize:13,fontFamily:"'DM Sans',sans-serif"}}/>
-            <Btn sm onClick={()=>{if(newPin.length>=4){upd("pin",()=>newPin);setNewPin("")}}}>{D.pin?"Ändern":"Setzen"}</Btn>
-            {D.pin&&<Btn sm danger onClick={()=>upd("pin",()=>"")}>Entfernen</Btn>}
-          </div>
-          {newPin&&newPin.length<4&&<div style={{color:C.orange,fontSize:10,marginTop:4}}>Mindestens 4 Zeichen</div>}
-        </Card>
-      </Section>
-      <Section title="DATEN">
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <Btn ghost onClick={()=>{const b=new Blob([JSON.stringify(D,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`elevo-backup-${new Date().toISOString().slice(0,10)}.json`;a.click()}}>Backup exportieren</Btn>
-          <Btn ghost onClick={()=>{const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);setD(d)}catch{alert("Ungültige Datei")}};r.readAsText(f)}};i.click()}}>Backup importieren</Btn>
-          <Btn danger onClick={()=>{if(confirm("Alle Daten zurücksetzen? Das kann nicht rückgängig gemacht werden.")){setD(INIT)}}}>Zurücksetzen</Btn>
-        </div>
-      </Section>
-      <Section title="ÜBER">
-        <Card sx={{padding:16}}>
-          <div style={{color:C.accent,fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:700,letterSpacing:".2em",marginBottom:8}}>E L E V O</div>
-          <div style={{color:C.off,fontSize:12,lineHeight:1.8}}>
-            Command Center v6.2 · Production Build + KI-Assistent<br/>
-            12 Module: Dashboard · Pipeline · Kontakte · Cold Outreach · Google Ads · Projekte · Websites · Tasks · SOPs · Finanzen · Notizen + KI Co-Pilot<br/>
-            Deployed via Coolify auf Netcup VPS
-          </div>
-        </Card>
-      </Section>
-    </div>);
-  };
-
-
-  /* ═══ MODALS ═══ */
-  const DealModal=()=>{const[f,sF]=useState(md.id?{...md}:{company:"",contact:"",email:"",phone:"",status:"Lead",service:"Website",volume:"",followUp:"",notes:"",source:"",created:new Date().toISOString().slice(0,10)});
-    const sv=()=>{if(!f.company)return;const d={...f,volume:parseFloat(f.volume)||0,id:f.id||nid()};upd("pipeline",p=>f.id?p.map(x=>x.id===f.id?d:x):[...p,d]);closeM()};
-    return(<Modal open title={f.id?"Deal bearbeiten":"Neuer Deal"} onClose={closeM}>
-      <Field label="Unternehmen" value={f.company} onChange={v=>sF(p=>({...p,company:v}))} placeholder="Firmenname"/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Field label="Kontaktperson" value={f.contact} onChange={v=>sF(p=>({...p,contact:v}))}/><Field label="E-Mail" value={f.email} onChange={v=>sF(p=>({...p,email:v}))}/></div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Field label="Status" value={f.status} onChange={v=>sF(p=>({...p,status:v}))} options={[...STAGES,"Verloren","Pausiert"]}/><Field label="Service" value={f.service} onChange={v=>sF(p=>({...p,service:v}))} options={["Website","Digitaler Audit","Strategie-Session","Komplettpaket","Sonstiges"]}/></div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}><Field label="Volumen (€)" value={f.volume} onChange={v=>sF(p=>({...p,volume:v}))} type="number" placeholder="1500"/><Field label="Follow-up" value={f.followUp} onChange={v=>sF(p=>({...p,followUp:v}))} type="date"/><Field label="Quelle" value={f.source} onChange={v=>sF(p=>({...p,source:v}))} options={["Cold E-Mail","Loom","Google Ads","Empfehlung","Direktansprache","Website","Sonstige"]}/></div>
-      <Field label="Notizen" value={f.notes} onChange={v=>sF(p=>({...p,notes:v}))} rows={3}/>
-      <div style={{display:"flex",gap:8,marginTop:16}}><Btn accent onClick={sv}>Speichern</Btn>{f.id&&<Btn danger onClick={()=>{upd("pipeline",p=>p.filter(d=>d.id!==f.id));closeM()}}>Löschen</Btn>}</div>
-    </Modal>);
-  };
-
-  const ContactModal=()=>{const[f,sF]=useState(md.id?{...md}:{firstName:"",lastName:"",company:"",email:"",phone:"",source:"",tags:[],notes:""});
-    const sv=()=>{if(!f.firstName)return;upd("contacts",cs=>f.id?cs.map(x=>x.id===f.id?f:x):[...cs,{...f,id:nid(),lastContact:new Date().toISOString().slice(0,10)}]);closeM()};
-    return(<Modal open title={f.id?"Kontakt bearbeiten":"Neuer Kontakt"} onClose={closeM}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Field label="Vorname" value={f.firstName} onChange={v=>sF(p=>({...p,firstName:v}))}/><Field label="Nachname" value={f.lastName} onChange={v=>sF(p=>({...p,lastName:v}))}/></div>
-      <Field label="Unternehmen" value={f.company} onChange={v=>sF(p=>({...p,company:v}))}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Field label="E-Mail" value={f.email} onChange={v=>sF(p=>({...p,email:v}))}/><Field label="Telefon" value={f.phone} onChange={v=>sF(p=>({...p,phone:v}))}/></div>
-      <Field label="Quelle" value={f.source} onChange={v=>sF(p=>({...p,source:v}))} options={["Netzwerk","Cold Outreach","Google Ads","Empfehlung","Loom","Sonstige"]}/>
-      <Field label="Notizen" value={f.notes} onChange={v=>sF(p=>({...p,notes:v}))} rows={2}/>
-      <div style={{display:"flex",gap:8,marginTop:16}}><Btn accent onClick={sv}>Speichern</Btn>{f.id&&<Btn danger onClick={()=>{upd("contacts",cs=>cs.filter(x=>x.id!==f.id));closeM()}}>Löschen</Btn>}</div>
-    </Modal>);
-  };
-
-  const TaskModal=()=>{const[f,sF]=useState(md.id?{...md}:{text:"",priority:"Mittel",category:"Allgemein",due:""});
-    const sv=()=>{if(!f.text)return;upd("tasks",ts=>f.id?ts.map(x=>x.id===f.id?f:x):[...ts,{...f,id:nid(),done:false}]);closeM()};
-    return(<Modal open title="Task" onClose={closeM}>
-      <Field label="Aufgabe" value={f.text} onChange={v=>sF(p=>({...p,text:v}))}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-        <Field label="Priorität" value={f.priority} onChange={v=>sF(p=>({...p,priority:v}))} options={["Hoch","Mittel","Niedrig"]}/>
-        <Field label="Kategorie" value={f.category} onChange={v=>sF(p=>({...p,category:v}))} options={["Outreach","Ads","Projekte","Vertrieb","Allgemein"]}/>
-        <Field label="Fällig" value={f.due} onChange={v=>sF(p=>({...p,due:v}))} type="date"/>
+        <textarea style={{ ...S.input, minHeight: 80, resize: 'vertical' }} placeholder="Notiz schreiben..." value={text} onChange={e => setText(e.target.value)} />
       </div>
-      <div style={{display:"flex",gap:8,marginTop:16}}><Btn accent onClick={sv}>Speichern</Btn></div>
-    </Modal>);
-  };
-
-  const ProjectModal=()=>{const[f,sF]=useState(md.id?{...md}:{name:"",client:"",status:"Planung",deadline:"",progress:0,notes:""});
-    const sv=()=>{if(!f.name)return;upd("projects",ps=>f.id?ps.map(x=>x.id===f.id?{...f,progress:parseInt(f.progress)||0}:x):[...ps,{...f,id:nid(),progress:parseInt(f.progress)||0}]);closeM()};
-    return(<Modal open title={f.id?"Projekt bearbeiten":"Neues Projekt"} onClose={closeM}>
-      <Field label="Name" value={f.name} onChange={v=>sF(p=>({...p,name:v}))}/><Field label="Kunde" value={f.client} onChange={v=>sF(p=>({...p,client:v}))}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-        <Field label="Status" value={f.status} onChange={v=>sF(p=>({...p,status:v}))} options={["Planung","In Arbeit","Review","Abgeschlossen","Pausiert"]}/>
-        <Field label="Deadline" value={f.deadline} onChange={v=>sF(p=>({...p,deadline:v}))} type="date"/><Field label="Fortschritt %" value={f.progress} onChange={v=>sF(p=>({...p,progress:v}))} type="number"/>
-      </div>
-      <Field label="Notizen" value={f.notes} onChange={v=>sF(p=>({...p,notes:v}))} rows={2}/>
-      <div style={{display:"flex",gap:8,marginTop:16}}><Btn accent onClick={sv}>Speichern</Btn>{f.id&&<Btn danger onClick={()=>{upd("projects",ps=>ps.filter(x=>x.id!==f.id));closeM()}}>Löschen</Btn>}</div>
-    </Modal>);
-  };
-
-  const WebsiteModal=()=>{const[f,sF]=useState(md.id?{...md}:{name:"",url:"",status:"Entwurf",hosting:"Hetzner/Coolify",footerLink:true});
-    const sv=()=>{if(!f.name)return;upd("websites",ws=>f.id?ws.map(x=>x.id===f.id?f:x):[...ws,{...f,id:nid()}]);closeM()};
-    return(<Modal open title={f.id?"Website bearbeiten":"Neue Website"} onClose={closeM}>
-      <Field label="Name" value={f.name} onChange={v=>sF(p=>({...p,name:v}))}/><Field label="Domain" value={f.url} onChange={v=>sF(p=>({...p,url:v}))}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><Field label="Status" value={f.status} onChange={v=>sF(p=>({...p,status:v}))} options={["Entwurf","Entwicklung","Live","Wartung","Offline"]}/><Field label="Hosting" value={f.hosting} onChange={v=>sF(p=>({...p,hosting:v}))}/></div>
-      <div style={{display:"flex",gap:8,marginTop:16}}><Btn accent onClick={sv}>Speichern</Btn>{f.id&&<Btn danger onClick={()=>{upd("websites",ws=>ws.filter(x=>x.id!==f.id));closeM()}}>Löschen</Btn>}</div>
-    </Modal>);
-  };
-
-
-  /* ═══ NAVIGATION ═══ */
-  const TABS=[
-    {id:"dashboard",icon:"◆",label:"Dashboard"},
-    {id:"pipeline",icon:"◈",label:"Pipeline"},
-    {id:"contacts",icon:"♦",label:"Kontakte"},
-    {id:"outreach",icon:"✉",label:"Outreach"},
-    {id:"ads",icon:"◎",label:"Ads"},
-    {id:"projects",icon:"▣",label:"Projekte"},
-    {id:"websites",icon:"◐",label:"Websites"},
-    {id:"tasks",icon:"☐",label:"Tasks"},
-    {id:"sops",icon:"✓",label:"SOPs"},
-    {id:"finances",icon:"◇",label:"Finanzen"},
-    {id:"notes",icon:"✎",label:"Notizen"},
-    {id:"settings",icon:"⚙",label:"Settings"},
-  ];
-
-  const pages={dashboard:DashboardPage,pipeline:PipelinePage,contacts:ContactsPage,outreach:OutreachPage,ads:AdsPage,projects:ProjectsPage,websites:WebsitesPage,tasks:TasksPage,sops:SOPsPage,finances:FinancesPage,notes:NotesPage,settings:SettingsPage};
-  const MOBTABS=["dashboard","pipeline","outreach","tasks","sops"];
-  const Page=pages[tab]||DashboardPage;
-  const ct=TABS.find(t=>t.id===tab);
-
-  return(
-    <div style={{display:"flex",flexDirection:"column",height:"100vh",fontFamily:"'DM Sans',sans-serif",background:C.bg,color:C.white,overflow:"hidden"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:${C.bg}}::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}.fade{animation:fi .2s ease}@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}select option{background:${C.panel};color:${C.white}}input:focus,select:focus,textarea:focus{outline:none;border-color:${C.accent}!important}`}</style>
-
-      {/* SIDEBAR Desktop */}
-      {!mob&&<div style={{position:"fixed",left:0,top:0,bottom:0,width:200,background:C.panel,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",zIndex:10}}>
-        <div style={{padding:"20px 18px 16px"}}>
-          <div style={{color:C.accent,fontFamily:"'Cormorant Garamond',serif",fontSize:19,letterSpacing:".28em",fontWeight:700}}>E L E V O</div>
-          <div style={{color:C.dim,fontSize:9,letterSpacing:".1em",marginTop:3}}>COMMAND CENTER</div>
-        </div>
-        <div style={{height:1,background:C.border,margin:"0 16px 8px"}}/>
-        <nav style={{flex:1,padding:"0 8px",overflowY:"auto"}}>
-          {TABS.map(t=><div key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:6,marginBottom:2,cursor:"pointer",background:tab===t.id?C.accentDim:"transparent",color:tab===t.id?C.accent:C.muted,transition:"all .15s"}}>
-            <span style={{fontSize:13,width:18,textAlign:"center"}}>{t.icon}</span>
-            <span style={{fontSize:12,fontWeight:tab===t.id?600:400}}>{t.label}</span>
-          </div>)}
-        </nav>
-        <div style={{padding:16,borderTop:`1px solid ${C.border}`}}>
-          <div style={{color:C.dim,fontSize:10,textAlign:"center"}}>Kosten: <span style={{color:C.orange}}>{eur(monthlyCost)}</span>/Mo</div>
-          <div style={{color:C.dim,fontSize:10,textAlign:"center",marginTop:2}}>Pipeline: <span style={{color:C.accent}}>{eur(pVal)}</span></div>
-        </div>
-      </div>}
-
-      {/* MAIN */}
-      <div style={{flex:1,marginLeft:mob?0:200,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:mob?"12px 16px":"12px 24px",borderBottom:`1px solid ${C.border}`,background:C.panel,flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            {mob&&<span onClick={()=>setSideOpen(!sideOpen)} style={{cursor:"pointer",fontSize:18,color:C.muted}}>☰</span>}
-            {mob&&<span style={{color:C.accent,fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:700,letterSpacing:".2em"}}>ELEVO</span>}
-            <span style={{color:C.white,fontSize:14,fontWeight:600}}>{ct?.icon} {ct?.label}</span>
-          </div>
-          <Badge color={C.green}>{D.pipeline.filter(d=>!["Verloren","Pausiert"].includes(d.status)).length} Deals</Badge>
-        </div>
-        <div style={{flex:1,overflow:"auto",padding:mob?16:24}}><Page/></div>
-      </div>
-
-      {/* MOBILE NAV */}
-      {mob&&<div style={{display:"flex",borderTop:`1px solid ${C.border}`,background:C.panel,flexShrink:0}}>
-        {TABS.filter(t=>MOBTABS.includes(t.id)).map(t=><div key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,textAlign:"center",padding:"10px 0",cursor:"pointer"}}>
-          <div style={{fontSize:15,color:tab===t.id?C.accent:C.dim}}>{t.icon}</div>
-          <div style={{fontSize:8,color:tab===t.id?C.accent:C.dim,marginTop:2}}>{t.label}</div>
-        </div>)}
-        <div onClick={()=>setSideOpen(true)} style={{flex:1,textAlign:"center",padding:"10px 0",cursor:"pointer"}}>
-          <div style={{fontSize:15,color:C.dim}}>≡</div><div style={{fontSize:8,color:C.dim,marginTop:2}}>Mehr</div>
-        </div>
-      </div>}
-
-      {/* MOBILE SLIDE MENU */}
-      {mob&&sideOpen&&<div onClick={()=>setSideOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:50}}>
-        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",left:0,top:0,bottom:0,width:220,background:C.panel,padding:16,overflowY:"auto"}}>
-          <div style={{color:C.accent,fontFamily:"'Cormorant Garamond',serif",fontSize:18,letterSpacing:".25em",fontWeight:700,marginBottom:16}}>E L E V O</div>
-          {TABS.map(t=><div key={t.id} onClick={()=>{setTab(t.id);setSideOpen(false)}} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:6,marginBottom:2,cursor:"pointer",background:tab===t.id?C.accentDim:"transparent",color:tab===t.id?C.accent:C.muted}}>
-            <span style={{fontSize:13}}>{t.icon}</span><span style={{fontSize:12}}>{t.label}</span>
-          </div>)}
-        </div>
-      </div>}
-
-      {/* MODALS */}
-      {modal==="deal"&&<DealModal/>}
-      {modal==="contact"&&<ContactModal/>}
-      {modal==="task"&&<TaskModal/>}
-      {modal==="project"&&<ProjectModal/>}
-      {modal==="website"&&<WebsiteModal/>}
-
-      {/* KI CHAT BUTTON */}
-      {apiKey&&<div onClick={()=>setChatOpen(!chatOpen)} style={{position:"fixed",bottom:mob?70:24,right:24,width:52,height:52,borderRadius:26,background:chatOpen?C.red:C.accent,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:60,boxShadow:"0 4px 20px rgba(0,0,0,.4)",transition:"all .2s"}}>
-        <span style={{fontSize:22,color:chatOpen?C.white:C.bg}}>{chatOpen?"✕":"◆"}</span>
-      </div>}
-
-      {/* KI CHAT PANEL */}
-      {chatOpen&&apiKey&&<div style={{position:"fixed",bottom:mob?70:24,right:mob?0:24,width:mob?"100%":420,height:mob?"calc(100vh - 70px)":"min(600px, calc(100vh - 80px))",background:C.panel,border:`1px solid ${C.border}`,borderRadius:mob?0:12,display:"flex",flexDirection:"column",zIndex:55,boxShadow:"0 8px 40px rgba(0,0,0,.5)",overflow:"hidden"}}>
-        {/* Header */}
-        <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:28,height:28,borderRadius:14,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:14}}>◆</div>
-            <div><div style={{color:C.white,fontSize:13,fontWeight:600}}>ELEVO KI</div><div style={{color:C.dim,fontSize:9}}>Dein Co-Pilot</div></div>
-          </div>
-          <div style={{display:"flex",gap:6}}>
-            <div onClick={()=>setChatMsgs([])} style={{cursor:"pointer",color:C.dim,fontSize:11,padding:"4px 8px",borderRadius:4,border:`1px solid ${C.border}`}}>Leeren</div>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div style={{flex:1,overflow:"auto",padding:16,display:"flex",flexDirection:"column",gap:10}}>
-          {chatMsgs.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:C.dim}}>
-            <div style={{fontSize:28,marginBottom:8,opacity:.3}}>◆</div>
-            <div style={{fontSize:13,marginBottom:16}}>Was kann ich für dich tun?</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {["Schreib ein Angebot für eine KMU-Website","Follow-up Mail an einen Lead","Was sollte mein nächster Schritt sein?","Analysiere meine Pipeline"].map(p=><div key={p} onClick={()=>{setChatInput(p)}} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",textAlign:"left",color:C.off,fontSize:11,cursor:"pointer"}}>{p}</div>)}
+      {[...data.notes].reverse().map(n => (
+        <div key={n.id} style={{ ...S.card, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontFamily: font.body, fontSize: 14, fontWeight: 500, color: C.text }}>{n.title}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date(n.created).toLocaleDateString('de-DE')}</span>
+              <button onClick={() => actions.deleteNote(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button>
             </div>
-          </div>}
-          {chatMsgs.map((m,i)=><div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"85%"}}>
-            <div style={{background:m.role==="user"?C.accentDim:C.card,border:`1px solid ${m.role==="user"?C.accentSoft:C.border}`,borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",padding:"10px 14px"}}>
-              <div style={{color:m.role==="user"?C.accent:C.off,fontSize:12,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{m.content}</div>
-            </div>
-          </div>)}
-          {chatLoading&&<div style={{alignSelf:"flex-start"}}>
-            <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:"12px 12px 12px 2px",padding:"10px 14px"}}>
-              <div style={{color:C.accent,fontSize:12}}>Denkt nach...</div>
-            </div>
-          </div>}
-          <div ref={chatEndRef}/>
-        </div>
-
-        {/* Input */}
-        <div style={{padding:12,borderTop:`1px solid ${C.border}`,flexShrink:0}}>
-          <div style={{display:"flex",gap:8}}>
-            <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat()}}} placeholder="Frag mich was..." style={{flex:1,padding:"10px 14px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,color:C.white,fontSize:12,fontFamily:"'DM Sans',sans-serif"}}/>
-            <button onClick={sendChat} disabled={chatLoading||!chatInput.trim()} style={{padding:"10px 16px",background:C.accent,color:C.bg,border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:chatLoading?"not-allowed":"pointer",opacity:chatLoading||!chatInput.trim()?.4:1,fontFamily:"'DM Sans',sans-serif"}}>→</button>
           </div>
+          <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, whiteSpace: 'pre-wrap' }}>{n.content}</div>
         </div>
-      </div>}
+      ))}
+      {data.notes.length === 0 && <Empty text="Keine Notizen" />}
+    </PlaceholderPage>
+  );
+};
+
+const Assistant = ({ data, actions }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const send = async () => {
+    if (!input.trim() || !data.settings.apiKey) return;
+    const userMsg = { role: 'user', content: input };
+    const newMsgs = [...messages, userMsg];
+    setMessages(newMsgs);
+    setInput('');
+    setLoading(true);
+    try {
+      const context = `Du bist der ELEVO KI-Assistent. Kontext: ${data.companies.length} Firmen, ${data.contacts.length} Kontakte, ${data.deals.length} Deals (Pipeline: ${helpers?.pipelineValue?.() || 0}€), ${data.tasks.filter(t=>!t.done).length} offene Tasks. Antworte kurz und auf Deutsch.`;
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': data.settings.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: context, messages: newMsgs.map(m => ({ role: m.role, content: m.content })) }),
+      });
+      const d = await res.json();
+      setMessages([...newMsgs, { role: 'assistant', content: d.content?.[0]?.text || 'Fehler' }]);
+    } catch (e) { setMessages([...newMsgs, { role: 'assistant', content: 'Fehler: ' + e.message }]); }
+    setLoading(false);
+  };
+
+  return (
+    <PlaceholderPage title="KI-Assistent">
+      {!data.settings.apiKey && <div style={{ ...S.card, background: C.orangeDim, borderColor: C.orange, marginBottom: 16 }}><span style={{ fontFamily: font.body, fontSize: 13, color: C.orange }}>⚠️ API-Key fehlt — bitte in Settings hinterlegen.</span></div>}
+      <div style={{ ...S.card, height: 400, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
+              <div style={{ maxWidth: '75%', padding: '8px 12px', borderRadius: 10, background: m.role === 'user' ? C.goldDim : C.bgHover, color: C.text, fontFamily: font.body, fontSize: 13, whiteSpace: 'pre-wrap' }}>{m.content}</div>
+            </div>
+          ))}
+          {loading && <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, padding: 8 }}>Denke nach...</div>}
+        </div>
+        <div style={{ display: 'flex', gap: 8, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+          <input style={{ ...S.input, flex: 1 }} placeholder="Frage stellen..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} />
+          <button onClick={send} style={{ ...S.btn, ...S.btnGold }} disabled={loading}>Senden</button>
+        </div>
+      </div>
+    </PlaceholderPage>
+  );
+};
+
+const Settings = ({ data, actions }) => {
+  const [pin, setPin] = useState(data.settings.pin || '');
+  const [apiKey, setApiKey] = useState(data.settings.apiKey || '');
+  const [importJson, setImportJson] = useState('');
+
+  return (
+    <PlaceholderPage title="Settings">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Sicherheit</h3>
+          <FormRow label="PIN"><input style={S.input} type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="4-stellig" /></FormRow>
+          <button onClick={() => actions.updateSettings({ pin })} style={{ ...S.btn, ...S.btnGold, marginTop: 8 }}>PIN speichern</button>
+        </div>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Claude API</h3>
+          <FormRow label="API Key"><input style={S.input} type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." /></FormRow>
+          <button onClick={() => actions.updateSettings({ apiKey })} style={{ ...S.btn, ...S.btnGold, marginTop: 8 }}>Key speichern</button>
+        </div>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Backup</h3>
+          <button onClick={actions.exportData} style={{ ...S.btn, ...S.btnGold, marginBottom: 10 }}>Export JSON</button>
+          <FormRow label="Import"><textarea style={{ ...S.input, minHeight: 60, resize: 'vertical' }} placeholder="JSON einfügen..." value={importJson} onChange={e => setImportJson(e.target.value)} /></FormRow>
+          <button onClick={() => { if (actions.importData(importJson)) setImportJson(''); }} style={{ ...S.btn, ...S.btnGhost }}>Importieren</button>
+        </div>
+        <div style={S.card}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Danger Zone</h3>
+          <p style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginBottom: 10 }}>Setzt alle Daten auf den Ausgangszustand zurück.</p>
+          <button onClick={() => { if (confirm('Wirklich alle Daten zurücksetzen?')) actions.resetData(); }} style={{ ...S.btn, background: C.redDim, color: C.red }}>Alle Daten zurücksetzen</button>
+        </div>
+      </div>
+    </PlaceholderPage>
+  );
+};
+
+// ============================================================================
+// APP — ROOT COMPONENT
+// ============================================================================
+export default function App() {
+  const { data, helpers, actions } = useAppData();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Cmd+K shortcut
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); }
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const props = { data, helpers, actions };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: font.body, color: C.text }}>
+      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Topbar onSearch={() => setSearchOpen(true)} />
+        <main style={{ flex: 1, overflowY: 'auto' }}>
+          <Routes>
+            <Route path="/" element={<Dashboard {...props} />} />
+            <Route path="/companies" element={<Companies {...props} />} />
+            <Route path="/companies/:id" element={<CompanyDetail {...props} />} />
+            <Route path="/contacts" element={<Contacts {...props} />} />
+            <Route path="/contacts/:id" element={<ContactDetail {...props} />} />
+            <Route path="/pipeline" element={<Pipeline {...props} />} />
+            <Route path="/deals/:id" element={<DealDetail {...props} />} />
+            <Route path="/projects" element={<Projects {...props} />} />
+            <Route path="/websites" element={<Websites {...props} />} />
+            <Route path="/tasks" element={<Tasks {...props} />} />
+            <Route path="/outreach" element={<Outreach {...props} />} />
+            <Route path="/ads" element={<Ads {...props} />} />
+            <Route path="/sops" element={<SOPs {...props} />} />
+            <Route path="/finances" element={<Finances {...props} />} />
+            <Route path="/notes" element={<Notes {...props} />} />
+            <Route path="/assistant" element={<Assistant {...props} />} />
+            <Route path="/settings" element={<Settings {...props} />} />
+          </Routes>
+        </main>
+      </div>
+      <GlobalSearch data={data} open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }
