@@ -703,12 +703,15 @@ const Dashboard = ({ data, helpers, actions }) => {
 // ============================================================================
 const Companies = ({ data, helpers, actions }) => {
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ name: '', industry: '', website: '', email: '', phone: '', address: '', size: '', source: '' });
+  const [editForm, setEditForm] = useState({});
+  const nav = useNavigate();
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return data.companies.filter(c => c.name.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || c.address?.toLowerCase().includes(q));
+    return data.companies.filter(c => c.name.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || c.address?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q));
   }, [data.companies, search]);
 
   const save = () => {
@@ -717,6 +720,10 @@ const Companies = ({ data, helpers, actions }) => {
     setShowAdd(false);
     setForm({ name: '', industry: '', website: '', email: '', phone: '', address: '', size: '', source: '' });
   };
+
+  const openEdit = (c) => { setEditForm({ ...c }); setShowEdit(true); };
+  const saveEdit = () => { actions.updateCompany(editForm.id, editForm); setShowEdit(false); };
+  const handleDelete = () => { if (confirm(`"${editForm.name}" und alle verknüpften Daten löschen?`)) { actions.deleteCompany(editForm.id); setShowEdit(false); } };
 
   return (
     <div style={S.page}>
@@ -735,7 +742,7 @@ const Companies = ({ data, helpers, actions }) => {
       <div style={S.card}>
         <table style={S.table}>
           <thead><tr>
-            <th style={S.th}>Firma</th><th style={S.th}>Branche</th><th style={S.th}>Ort</th><th style={S.th}>Kontakte</th><th style={S.th}>Deals</th><th style={S.th}>Volumen</th><th style={S.th}>Quelle</th>
+            <th style={S.th}>Firma</th><th style={S.th}>Branche</th><th style={S.th}>Ort</th><th style={S.th}>Kontakte</th><th style={S.th}>Deals</th><th style={S.th}>Volumen</th><th style={S.th}>Quelle</th><th style={S.th}></th>
           </tr></thead>
           <tbody>
             {filtered.map(c => {
@@ -751,6 +758,7 @@ const Companies = ({ data, helpers, actions }) => {
                   <td style={S.td}><Badge variant="purple">{dls.length}</Badge></td>
                   <td style={{ ...S.td, fontWeight: 500, color: vol > 0 ? C.gold : C.textDim }}>{vol > 0 ? `${vol.toLocaleString('de-DE')}€` : '–'}</td>
                   <td style={S.td}>{statusBadge(c.source)}</td>
+                  <td style={S.td}><button onClick={(e) => { e.stopPropagation(); openEdit(c); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button></td>
                 </tr>
               );
             })}
@@ -773,6 +781,26 @@ const Companies = ({ data, helpers, actions }) => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
           <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Firma bearbeiten" width={520}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Firmenname"><input style={S.input} value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="Branche"><input style={S.input} value={editForm.industry || ''} onChange={e => setEditForm(f => ({ ...f, industry: e.target.value }))} /></FormRow>
+          <FormRow label="Website"><input style={S.input} value={editForm.website || ''} onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={editForm.email || ''} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={editForm.phone || ''} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="+49..." /></FormRow>
+          <FormRow label="Ort"><input style={S.input} value={editForm.address || ''} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} /></FormRow>
+          <FormRow label="Größe"><select style={S.select} value={editForm.size || ''} onChange={e => setEditForm(f => ({ ...f, size: e.target.value }))}><option value="">–</option><option>Klein</option><option>KMU</option><option>Mittelstand</option><option>Groß</option></select></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={editForm.source || ''} onChange={e => setEditForm(f => ({ ...f, source: e.target.value }))}><option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Referenz</option><option>Direkt</option></select></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+          <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          </div>
         </div>
       </Modal>
     </div>
@@ -983,11 +1011,13 @@ const CompanyDetail = ({ data, helpers, actions }) => {
 const Contacts = ({ data, helpers, actions }) => {
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [ctForm, setCtForm] = useState({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '', companyId: '' });
+  const [editForm, setEditForm] = useState({});
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return data.contacts.filter(c => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.position?.toLowerCase().includes(q));
+    return data.contacts.filter(c => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.position?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q));
   }, [data.contacts, search]);
 
   const saveContact = () => {
@@ -996,16 +1026,20 @@ const Contacts = ({ data, helpers, actions }) => {
     setShowAdd(false); setCtForm({ firstName: '', lastName: '', email: '', phone: '', position: '', source: '', companyId: '' });
   };
 
+  const openEdit = (c) => { setEditForm({ ...c }); setShowEdit(true); };
+  const saveEdit = () => { actions.updateContact(editForm.id, editForm); setShowEdit(false); };
+  const handleDelete = () => { if (confirm(`"${editForm.firstName} ${editForm.lastName}" löschen?`)) { actions.deleteContact(editForm.id); setShowEdit(false); } };
+
   return (
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Kontakte</h1><p style={S.pageSub}>{data.contacts.length} Kontakte</p></div>
         <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Kontakt</button>
       </div>
-      <div style={{ marginBottom: 16 }}><input style={{ ...S.input, maxWidth: 320 }} placeholder="Kontakte durchsuchen..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+      <div style={{ marginBottom: 16 }}><input style={{ ...S.input, maxWidth: 320 }} placeholder="Name, E-Mail, Telefon suchen..." value={search} onChange={e => setSearch(e.target.value)} /></div>
       <div style={S.card}>
         <table style={S.table}>
-          <thead><tr><th style={S.th}>Name</th><th style={S.th}>Firma</th><th style={S.th}>Position</th><th style={S.th}>E-Mail</th><th style={S.th}>Letzter Kontakt</th><th style={S.th}>Deals</th></tr></thead>
+          <thead><tr><th style={S.th}>Name</th><th style={S.th}>Firma</th><th style={S.th}>Position</th><th style={S.th}>E-Mail</th><th style={S.th}>Telefon</th><th style={S.th}>Letzter Kontakt</th><th style={S.th}>Deals</th><th style={S.th}></th></tr></thead>
           <tbody>{filtered.map(c => {
             const comp = helpers.getCompany(c.companyId);
             const dls = helpers.contactDeals(c.id);
@@ -1015,8 +1049,10 @@ const Contacts = ({ data, helpers, actions }) => {
                 <td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td>
                 <td style={{ ...S.td, color: C.textDim }}>{c.position}</td>
                 <td style={{ ...S.td, color: C.textDim }}>{c.email}</td>
+                <td style={{ ...S.td, color: C.textDim }}>{c.phone || '–'}</td>
                 <td style={{ ...S.td, color: C.textDim }}>{c.lastContact && new Date(c.lastContact).toLocaleDateString('de-DE')}</td>
                 <td style={S.td}><Badge variant="purple">{dls.length}</Badge></td>
+                <td style={S.td}><button onClick={(e) => { e.stopPropagation(); openEdit(c); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button></td>
               </tr>
             );
           })}</tbody>
@@ -1036,7 +1072,7 @@ const Contacts = ({ data, helpers, actions }) => {
           <FormRow label="Vorname *"><input style={S.input} value={ctForm.firstName} onChange={e => setCtForm(f => ({ ...f, firstName: e.target.value }))} /></FormRow>
           <FormRow label="Nachname"><input style={S.input} value={ctForm.lastName} onChange={e => setCtForm(f => ({ ...f, lastName: e.target.value }))} /></FormRow>
           <FormRow label="E-Mail"><input style={S.input} value={ctForm.email} onChange={e => setCtForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
-          <FormRow label="Telefon"><input style={S.input} value={ctForm.phone} onChange={e => setCtForm(f => ({ ...f, phone: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={ctForm.phone} onChange={e => setCtForm(f => ({ ...f, phone: e.target.value }))} placeholder="+49..." /></FormRow>
         </div>
         <FormRow label="Quelle">
           <select style={S.select} value={ctForm.source} onChange={e => setCtForm(f => ({ ...f, source: e.target.value }))}>
@@ -1046,6 +1082,34 @@ const Contacts = ({ data, helpers, actions }) => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
           <button onClick={saveContact} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Kontakt bearbeiten" width={520}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Vorname"><input style={S.input} value={editForm.firstName || ''} onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))} /></FormRow>
+          <FormRow label="Nachname"><input style={S.input} value={editForm.lastName || ''} onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={editForm.email || ''} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={editForm.phone || ''} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="+49..." /></FormRow>
+          <FormRow label="Position"><input style={S.input} value={editForm.position || ''} onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))} /></FormRow>
+          <FormRow label="Firma">
+            <select style={S.select} value={editForm.companyId || ''} onChange={e => setEditForm(f => ({ ...f, companyId: e.target.value }))}>
+              <option value="">–</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </FormRow>
+          <FormRow label="Quelle">
+            <select style={S.select} value={editForm.source || ''} onChange={e => setEditForm(f => ({ ...f, source: e.target.value }))}>
+              <option value="">–</option><option>Outreach</option><option>Google Ads</option><option>Empfehlung</option><option>Direkt</option>
+            </select>
+          </FormRow>
+          <FormRow label="Letzter Kontakt"><input style={S.input} type="date" value={editForm.lastContact || ''} onChange={e => setEditForm(f => ({ ...f, lastContact: e.target.value }))} /></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+          <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          </div>
         </div>
       </Modal>
     </div>
@@ -1379,57 +1443,141 @@ const DealDetail = ({ data, helpers, actions }) => {
 };
 
 // ============================================================================
-// PAGES — PROJECTS
+// PAGES — PROJECTS (full CRUD)
 // ============================================================================
-const Projects = ({ data, helpers, actions }) => (
-  <div style={S.page}>
-    <h1 style={S.pageTitle}>Projekte</h1>
-    <p style={{ ...S.pageSub, marginBottom: 24 }}>{data.projects.length} Projekte</p>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-      {data.projects.map(p => {
-        const comp = helpers.getCompany(p.companyId);
-        const ws = data.websites.filter(w => w.projectId === p.id);
-        return (
-          <div key={p.id} style={S.card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontFamily: font.body, fontSize: 14, fontWeight: 500, color: C.text }}>{p.name}</span>
-              {statusBadge(p.status)}
+const Projects = ({ data, helpers, actions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [form, setForm] = useState({ name: '', companyId: '', status: 'Planung', progress: 0, deadline: '', notes: '' });
+  const [editForm, setEditForm] = useState({});
+
+  const save = () => { if (!form.name.trim()) return; actions.addProject(form); setShowAdd(false); setForm({ name: '', companyId: '', status: 'Planung', progress: 0, deadline: '', notes: '' }); };
+  const saveEdit = () => { actions.updateProject(editForm.id, editForm); setShowEdit(false); };
+
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div><h1 style={S.pageTitle}>Projekte</h1><p style={S.pageSub}>{data.projects.length} Projekte</p></div>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neues Projekt</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+        {data.projects.map(p => {
+          const comp = helpers.getCompany(p.companyId);
+          const ws = data.websites.filter(w => w.projectId === p.id);
+          return (
+            <div key={p.id} style={S.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontFamily: font.body, fontSize: 14, fontWeight: 500, color: C.text }}>{p.name}</span>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {statusBadge(p.status)}
+                  <button onClick={() => { setEditForm({ ...p }); setShowEdit(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button>
+                </div>
+              </div>
+              {comp && <Link to={`/companies/${comp.id}`} style={{ ...S.link, fontSize: 12 }}>{comp.name}</Link>}
+              <div style={{ height: 4, background: C.border, borderRadius: 2, margin: '12px 0 6px' }}><div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2 }} /></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{p.progress}%</span>
+                {p.deadline && <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{new Date(p.deadline).toLocaleDateString('de-DE')}</span>}
+              </div>
+              {ws.map(w => <div key={w.id} style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, marginTop: 6 }}>🌐 {w.url}</div>)}
+              {p.notes && <div style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted, marginTop: 6, fontStyle: 'italic' }}>{p.notes}</div>}
+              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                {[0, 25, 50, 75, 100].map(v => (
+                  <button key={v} onClick={() => actions.updateProject(p.id, { progress: v, status: v === 100 ? 'Fertig' : v > 0 ? 'In Arbeit' : 'Planung' })} style={{ ...S.btn, padding: '4px 8px', fontSize: 10, ...(p.progress === v ? S.btnGold : S.btnGhost) }}>{v}%</button>
+                ))}
+              </div>
             </div>
-            {comp && <Link to={`/companies/${comp.id}`} style={{ ...S.link, fontSize: 12 }}>{comp.name}</Link>}
-            <div style={{ height: 4, background: C.border, borderRadius: 2, margin: '12px 0 6px' }}><div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2 }} /></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{p.progress}% abgeschlossen</span>
-              {p.deadline && <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{new Date(p.deadline).toLocaleDateString('de-DE')}</span>}
-            </div>
-            {ws.map(w => <div key={w.id} style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, marginTop: 6 }}>🌐 {w.url}</div>)}
-            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              {[0, 25, 50, 75, 100].map(v => (
-                <button key={v} onClick={() => actions.updateProject(p.id, { progress: v, status: v === 100 ? 'Fertig' : v > 0 ? 'In Arbeit' : 'Planung' })} style={{ ...S.btn, padding: '4px 8px', fontSize: 10, ...(p.progress === v ? S.btnGold : S.btnGhost) }}>{v}%</button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+        {data.projects.length === 0 && <Empty text="Keine Projekte" />}
+      </div>
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Neues Projekt">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Projektname *"><input style={S.input} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="Firma"><select style={S.select} value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}><option value="">–</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormRow>
+          <FormRow label="Deadline"><input style={S.input} type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} /></FormRow>
+          <FormRow label="Status"><select style={S.select} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}><option>Planung</option><option>In Arbeit</option><option>Fertig</option></select></FormRow>
+        </div>
+        <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Projekt bearbeiten">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Projektname"><input style={S.input} value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="Firma"><select style={S.select} value={editForm.companyId || ''} onChange={e => setEditForm(f => ({ ...f, companyId: e.target.value }))}><option value="">–</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormRow>
+          <FormRow label="Deadline"><input style={S.input} type="date" value={editForm.deadline || ''} onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))} /></FormRow>
+          <FormRow label="Status"><select style={S.select} value={editForm.status || ''} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}><option>Planung</option><option>In Arbeit</option><option>Fertig</option></select></FormRow>
+        </div>
+        <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
     </div>
-  </div>
-);
+  );
+};
 
 // ============================================================================
-// PAGES — WEBSITES
+// PAGES — WEBSITES (full CRUD)
 // ============================================================================
-const Websites = ({ data, helpers }) => (
-  <div style={S.page}>
-    <h1 style={S.pageTitle}>Websites</h1>
-    <p style={{ ...S.pageSub, marginBottom: 24 }}>{data.websites.length} Websites</p>
-    <div style={S.card}>
-      <table style={S.table}><thead><tr><th style={S.th}>Name</th><th style={S.th}>URL</th><th style={S.th}>Firma</th><th style={S.th}>Status</th><th style={S.th}>Hosting</th><th style={S.th}>Footer-Link</th></tr></thead>
-        <tbody>{data.websites.map(w => {
-          const comp = helpers.getCompany(w.companyId);
-          return <tr key={w.id}><td style={S.td}>{w.name}</td><td style={{ ...S.td, color: C.gold }}>{w.url}</td><td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td><td style={S.td}>{statusBadge(w.status)}</td><td style={{ ...S.td, color: C.textDim }}>{w.hosting}</td><td style={S.td}>{w.footerLink ? '✓' : '–'}</td></tr>;
-        })}</tbody></table>
+const Websites = ({ data, helpers, actions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [form, setForm] = useState({ name: '', url: '', companyId: '', projectId: '', status: 'Entwicklung', hosting: 'Coolify', footerLink: true });
+  const [editForm, setEditForm] = useState({});
+
+  const save = () => { if (!form.name.trim()) return; actions.addWebsite(form); setShowAdd(false); setForm({ name: '', url: '', companyId: '', projectId: '', status: 'Entwicklung', hosting: 'Coolify', footerLink: true }); };
+  const saveEdit = () => { actions.updateWebsite(editForm.id, editForm); setShowEdit(false); };
+
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div><h1 style={S.pageTitle}>Websites</h1><p style={S.pageSub}>{data.websites.length} Websites</p></div>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue Website</button>
+      </div>
+      <div style={S.card}>
+        <table style={S.table}><thead><tr><th style={S.th}>Name</th><th style={S.th}>URL</th><th style={S.th}>Firma</th><th style={S.th}>Status</th><th style={S.th}>Hosting</th><th style={S.th}>Footer</th><th style={S.th}></th></tr></thead>
+          <tbody>{data.websites.map(w => {
+            const comp = helpers.getCompany(w.companyId);
+            return <tr key={w.id}><td style={S.td}>{w.name}</td><td style={{ ...S.td, color: C.gold }}>{w.url}</td><td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td><td style={S.td}>{statusBadge(w.status)}</td><td style={{ ...S.td, color: C.textDim }}>{w.hosting}</td><td style={S.td}>{w.footerLink ? '✓' : '–'}</td><td style={S.td}><button onClick={() => { setEditForm({ ...w }); setShowEdit(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button></td></tr>;
+          })}</tbody></table>
+        {data.websites.length === 0 && <Empty text="Keine Websites" />}
+      </div>
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Neue Website">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Name *"><input style={S.input} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="URL"><input style={S.input} value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="domain.de" /></FormRow>
+          <FormRow label="Firma"><select style={S.select} value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}><option value="">–</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormRow>
+          <FormRow label="Projekt"><select style={S.select} value={form.projectId} onChange={e => setForm(f => ({ ...f, projectId: e.target.value }))}><option value="">–</option>{data.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></FormRow>
+          <FormRow label="Status"><select style={S.select} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}><option>Entwicklung</option><option>Staging</option><option>Live</option></select></FormRow>
+          <FormRow label="Hosting"><input style={S.input} value={form.hosting} onChange={e => setForm(f => ({ ...f, hosting: e.target.value }))} /></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Website bearbeiten">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Name"><input style={S.input} value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+          <FormRow label="URL"><input style={S.input} value={editForm.url || ''} onChange={e => setEditForm(f => ({ ...f, url: e.target.value }))} /></FormRow>
+          <FormRow label="Firma"><select style={S.select} value={editForm.companyId || ''} onChange={e => setEditForm(f => ({ ...f, companyId: e.target.value }))}><option value="">–</option>{data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></FormRow>
+          <FormRow label="Status"><select style={S.select} value={editForm.status || ''} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}><option>Entwicklung</option><option>Staging</option><option>Live</option></select></FormRow>
+          <FormRow label="Hosting"><input style={S.input} value={editForm.hosting || ''} onChange={e => setEditForm(f => ({ ...f, hosting: e.target.value }))} /></FormRow>
+          <FormRow label="Footer-Link"><select style={S.select} value={editForm.footerLink ? 'ja' : 'nein'} onChange={e => setEditForm(f => ({ ...f, footerLink: e.target.value === 'ja' }))}><option value="ja">Ja</option><option value="nein">Nein</option></select></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
     </div>
-  </div>
-);
+  );
+};
 
 // ============================================================================
 // PAGES — TASKS
@@ -1492,140 +1640,437 @@ const Tasks = ({ data, actions }) => {
 };
 
 // ============================================================================
-// PLACEHOLDER PAGES (to be expanded in Part 2)
+// FULL MODULES — Outreach, Ads, SOPs, Finances, Notes
 // ============================================================================
-const PlaceholderPage = ({ title, icon, children }) => (
-  <div style={S.page}>
-    <h1 style={S.pageTitle}>{title}</h1>
-    <div style={{ marginTop: 20 }}>{children}</div>
+const PageHeader = ({ title, sub, children }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+    <div><h1 style={S.pageTitle}>{title}</h1>{sub && <p style={S.pageSub}>{sub}</p>}</div>
+    {children}
   </div>
 );
 
-const Outreach = ({ data }) => (
-  <PlaceholderPage title="Cold Outreach">
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-      <div style={S.card}>
-        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Domains & Postfächer</h3>
-        {data.outreach.domains.map((d, i) => (
-          <div key={i} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{d.name}</div>
-            <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{d.mailboxes.join(', ')}</div>
-            <Badge variant="green">{d.warmup}</Badge>
+const Outreach = ({ data, actions }) => {
+  const [showAddDomain, setShowAddDomain] = useState(false);
+  const [showAddList, setShowAddList] = useState(false);
+  const [showAddSeq, setShowAddSeq] = useState(false);
+  const [domForm, setDomForm] = useState({ name: '', mailboxes: '', warmup: 'Aktiv' });
+  const [listForm, setListForm] = useState({ name: '', count: 0, source: 'Outscraper' });
+  const [seqForm, setSeqForm] = useState({ name: '', steps: [{ day: 1, subject: '', body: '' }] });
+
+  const saveDomain = () => {
+    if (!domForm.name.trim()) return;
+    const d = { ...domForm, mailboxes: domForm.mailboxes.split(',').map(m => m.trim()).filter(Boolean) };
+    actions.updateOutreach({ domains: [...data.outreach.domains, d] });
+    setShowAddDomain(false); setDomForm({ name: '', mailboxes: '', warmup: 'Aktiv' });
+  };
+
+  const removeDomain = (i) => { actions.updateOutreach({ domains: data.outreach.domains.filter((_, idx) => idx !== i) }); };
+
+  const saveList = () => {
+    if (!listForm.name.trim()) return;
+    actions.updateOutreach({ lists: [...data.outreach.lists, { ...listForm, count: Number(listForm.count) || 0 }] });
+    setShowAddList(false); setListForm({ name: '', count: 0, source: 'Outscraper' });
+  };
+
+  const removeList = (i) => { actions.updateOutreach({ lists: data.outreach.lists.filter((_, idx) => idx !== i) }); };
+
+  const updateListCount = (i, count) => {
+    const lists = [...data.outreach.lists]; lists[i] = { ...lists[i], count: Number(count) || 0 };
+    actions.updateOutreach({ lists });
+  };
+
+  const saveSeq = () => {
+    if (!seqForm.name.trim()) return;
+    actions.updateOutreach({ sequences: [...data.outreach.sequences, { ...seqForm }] });
+    setShowAddSeq(false); setSeqForm({ name: '', steps: [{ day: 1, subject: '', body: '' }] });
+  };
+
+  const addSeqStep = () => setSeqForm(f => ({ ...f, steps: [...f.steps, { day: f.steps.length * 3 + 1, subject: '', body: '' }] }));
+
+  return (
+    <div style={S.page}>
+      <PageHeader title="Cold Outreach" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Domains & Postfächer</h3>
+            <button onClick={() => setShowAddDomain(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Domain</button>
+          </div>
+          {data.outreach.domains.map((d, i) => (
+            <div key={i} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{d.name}</div>
+                <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{d.mailboxes.join(', ')}</div>
+                <Badge variant="green">{d.warmup}</Badge>
+              </div>
+              <button onClick={() => removeDomain(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button>
+            </div>
+          ))}
+          {data.outreach.domains.length === 0 && <Empty text="Keine Domains" />}
+        </div>
+
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Sequenzen</h3>
+            <button onClick={() => setShowAddSeq(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Sequenz</button>
+          </div>
+          {data.outreach.sequences.map((s, i) => (
+            <div key={i} style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 6 }}>{s.name}</div>
+              {s.steps.map((st, j) => (
+                <div key={j} style={{ padding: '5px 0', borderBottom: `1px solid ${C.border}`, fontFamily: font.body, fontSize: 12, color: C.textDim }}>
+                  <Badge variant="blue">Tag {st.day}</Badge> {st.subject}
+                </div>
+              ))}
+            </div>
+          ))}
+          {data.outreach.sequences.length === 0 && <Empty text="Keine Sequenzen" />}
+        </div>
+
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Kontaktlisten</h3>
+            <button onClick={() => setShowAddList(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Liste</button>
+          </div>
+          {data.outreach.lists.map((l, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+              <div>
+                <span style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{l.name}</span>
+                <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, marginLeft: 8 }}>{l.source}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input style={{ ...S.input, width: 60, textAlign: 'center', padding: '4px 6px', fontSize: 12 }} type="number" value={l.count} onChange={e => updateListCount(i, e.target.value)} />
+                <button onClick={() => removeList(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button>
+              </div>
+            </div>
+          ))}
+          {data.outreach.lists.length === 0 && <Empty text="Keine Listen" />}
+        </div>
+      </div>
+
+      <Modal open={showAddDomain} onClose={() => setShowAddDomain(false)} title="Neue Domain">
+        <FormRow label="Domain *"><input style={S.input} value={domForm.name} onChange={e => setDomForm(f => ({ ...f, name: e.target.value }))} placeholder="elevo-digital.de" /></FormRow>
+        <FormRow label="Postfächer (kommagetrennt)"><input style={S.input} value={domForm.mailboxes} onChange={e => setDomForm(f => ({ ...f, mailboxes: e.target.value }))} placeholder="info@domain.de, hello@domain.de" /></FormRow>
+        <FormRow label="Warmup"><select style={S.select} value={domForm.warmup} onChange={e => setDomForm(f => ({ ...f, warmup: e.target.value }))}><option>Aktiv</option><option>Fertig</option><option>Pausiert</option></select></FormRow>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAddDomain(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveDomain} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+      <Modal open={showAddList} onClose={() => setShowAddList(false)} title="Neue Kontaktliste">
+        <FormRow label="Listenname *"><input style={S.input} value={listForm.name} onChange={e => setListForm(f => ({ ...f, name: e.target.value }))} placeholder="z.B. Handwerker Aachen" /></FormRow>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Anzahl Kontakte"><input style={S.input} type="number" value={listForm.count} onChange={e => setListForm(f => ({ ...f, count: e.target.value }))} /></FormRow>
+          <FormRow label="Quelle"><select style={S.select} value={listForm.source} onChange={e => setListForm(f => ({ ...f, source: e.target.value }))}><option>Outscraper</option><option>LinkedIn</option><option>Google Maps</option><option>Manuell</option></select></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setShowAddList(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveList} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+      <Modal open={showAddSeq} onClose={() => setShowAddSeq(false)} title="Neue Sequenz" width={560}>
+        <FormRow label="Sequenzname *"><input style={S.input} value={seqForm.name} onChange={e => setSeqForm(f => ({ ...f, name: e.target.value }))} placeholder="z.B. Webdesign Cold Outreach" /></FormRow>
+        {seqForm.steps.map((st, i) => (
+          <div key={i} style={{ ...S.card, padding: 12, marginBottom: 8 }}>
+            <div style={{ fontFamily: font.body, fontSize: 11, fontWeight: 600, color: C.gold, marginBottom: 6 }}>Schritt {i + 1}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: 8 }}>
+              <FormRow label="Tag"><input style={S.input} type="number" value={st.day} onChange={e => { const steps = [...seqForm.steps]; steps[i] = { ...steps[i], day: Number(e.target.value) }; setSeqForm(f => ({ ...f, steps })); }} /></FormRow>
+              <FormRow label="Betreff"><input style={S.input} value={st.subject} onChange={e => { const steps = [...seqForm.steps]; steps[i] = { ...steps[i], subject: e.target.value }; setSeqForm(f => ({ ...f, steps })); }} /></FormRow>
+            </div>
           </div>
         ))}
+        <button onClick={addSeqStep} style={{ ...S.btn, ...S.btnGhost, fontSize: 11, marginBottom: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.textDim })} Schritt</button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={() => setShowAddSeq(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+          <button onClick={saveSeq} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+const Ads = ({ data, actions }) => {
+  const [showAddCampaign, setShowAddCampaign] = useState(false);
+  const [showEditCampaign, setShowEditCampaign] = useState(false);
+  const [showAddKeyword, setShowAddKeyword] = useState(false);
+  const [campForm, setCampForm] = useState({ name: '', status: 'Geplant', budget: 0, clicks: 0, impressions: 0, ctr: 0, conversions: 0 });
+  const [editIdx, setEditIdx] = useState(-1);
+  const [kwForm, setKwForm] = useState('');
+
+  const saveCampaign = () => { if (!campForm.name.trim()) return; actions.updateAds({ campaigns: [...data.ads.campaigns, { ...campForm, budget: Number(campForm.budget), clicks: Number(campForm.clicks), impressions: Number(campForm.impressions), ctr: Number(campForm.ctr), conversions: Number(campForm.conversions) }] }); setShowAddCampaign(false); setCampForm({ name: '', status: 'Geplant', budget: 0, clicks: 0, impressions: 0, ctr: 0, conversions: 0 }); };
+  const openEdit = (i) => { setCampForm({ ...data.ads.campaigns[i] }); setEditIdx(i); setShowEditCampaign(true); };
+  const saveEditCampaign = () => { const c = [...data.ads.campaigns]; c[editIdx] = { ...campForm, budget: Number(campForm.budget), clicks: Number(campForm.clicks), impressions: Number(campForm.impressions), ctr: Number(campForm.ctr), conversions: Number(campForm.conversions) }; actions.updateAds({ campaigns: c }); setShowEditCampaign(false); };
+  const removeCampaign = (i) => { actions.updateAds({ campaigns: data.ads.campaigns.filter((_, idx) => idx !== i) }); };
+  const addKeyword = () => { if (!kwForm.trim()) return; actions.updateAds({ negativeKeywords: [...data.ads.negativeKeywords, kwForm.trim().toLowerCase()] }); setKwForm(''); setShowAddKeyword(false); };
+  const removeKeyword = (i) => { actions.updateAds({ negativeKeywords: data.ads.negativeKeywords.filter((_, idx) => idx !== i) }); };
+
+  const totalClicks = data.ads.campaigns.reduce((s, c) => s + (c.clicks || 0), 0);
+  const totalConv = data.ads.campaigns.reduce((s, c) => s + (c.conversions || 0), 0);
+
+  const CampaignFormFields = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <FormRow label="Kampagnenname *"><input style={S.input} value={campForm.name} onChange={e => setCampForm(f => ({ ...f, name: e.target.value }))} /></FormRow>
+      <FormRow label="Status"><select style={S.select} value={campForm.status} onChange={e => setCampForm(f => ({ ...f, status: e.target.value }))}><option>Geplant</option><option>Aktiv</option><option>Pausiert</option></select></FormRow>
+      <FormRow label="Budget (€)"><input style={S.input} type="number" value={campForm.budget} onChange={e => setCampForm(f => ({ ...f, budget: e.target.value }))} /></FormRow>
+      <FormRow label="Klicks"><input style={S.input} type="number" value={campForm.clicks} onChange={e => setCampForm(f => ({ ...f, clicks: e.target.value }))} /></FormRow>
+      <FormRow label="Impressions"><input style={S.input} type="number" value={campForm.impressions} onChange={e => setCampForm(f => ({ ...f, impressions: e.target.value }))} /></FormRow>
+      <FormRow label="CTR (%)"><input style={S.input} type="number" step="0.1" value={campForm.ctr} onChange={e => setCampForm(f => ({ ...f, ctr: e.target.value }))} /></FormRow>
+      <FormRow label="Conversions"><input style={S.input} type="number" value={campForm.conversions} onChange={e => setCampForm(f => ({ ...f, conversions: e.target.value }))} /></FormRow>
+    </div>
+  );
+
+  return (
+    <div style={S.page}>
+      <PageHeader title="Google Ads" sub={`${data.ads.budget}€/Monat • ${data.ads.region}`}>
+        <button onClick={() => setShowAddCampaign(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Kampagne</button>
+      </PageHeader>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <StatCard label="Budget" value={`${data.ads.budget}€`} sub="pro Monat" />
+        <StatCard label="Klicks" value={totalClicks} color={C.blue} />
+        <StatCard label="Conversions" value={totalConv} color={C.green} />
+        <StatCard label="Kampagnen" value={data.ads.campaigns.length} color={C.purple} />
       </div>
       <div style={S.card}>
-        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Sequenzen</h3>
-        {data.outreach.sequences.map((s, i) => (
-          <div key={i}>
-            <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>{s.name}</div>
-            {s.steps.map((st, j) => (
-              <div key={j} style={{ padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontFamily: font.body, fontSize: 12, color: C.textDim }}>
-                Tag {st.day}: {st.subject}
+        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Kampagnen</h3>
+        <table style={S.table}><thead><tr><th style={S.th}>Kampagne</th><th style={S.th}>Status</th><th style={S.th}>Budget</th><th style={S.th}>Klicks</th><th style={S.th}>Impr.</th><th style={S.th}>CTR</th><th style={S.th}>Conv.</th><th style={S.th}></th></tr></thead>
+          <tbody>{data.ads.campaigns.map((c, i) => (
+            <tr key={i}><td style={S.td}>{c.name}</td><td style={S.td}>{statusBadge(c.status)}</td><td style={{ ...S.td, color: C.gold }}>{c.budget}€</td><td style={S.td}>{c.clicks}</td><td style={S.td}>{c.impressions}</td><td style={S.td}>{c.ctr}%</td><td style={S.td}>{c.conversions}</td>
+            <td style={S.td}><div style={{ display: 'flex', gap: 6 }}><button onClick={() => openEdit(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button><button onClick={() => removeCampaign(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button></div></td></tr>
+          ))}</tbody></table>
+      </div>
+      <div style={{ ...S.card, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Negative Keywords</h3>
+          <button onClick={() => setShowAddKeyword(true)} style={{ ...S.btn, ...S.btnGhost, fontSize: 11 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.textDim })} Keyword</button>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {data.ads.negativeKeywords.map((k, i) => (
+            <span key={i} style={{ ...S.badge(C.redDim, C.red), cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }} onClick={() => removeKeyword(i)}>{k} ×</span>
+          ))}
+        </div>
+      </div>
+      <Modal open={showAddCampaign} onClose={() => setShowAddCampaign(false)} title="Neue Kampagne"><CampaignFormFields /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddCampaign(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveCampaign} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div></Modal>
+      <Modal open={showEditCampaign} onClose={() => setShowEditCampaign(false)} title="Kampagne bearbeiten"><CampaignFormFields /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowEditCampaign(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveEditCampaign} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div></Modal>
+      <Modal open={showAddKeyword} onClose={() => setShowAddKeyword(false)} title="Negatives Keyword"><FormRow label="Keyword"><input style={S.input} value={kwForm} onChange={e => setKwForm(e.target.value)} placeholder="z.B. kostenlos" onKeyDown={e => e.key === 'Enter' && addKeyword()} /></FormRow><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddKeyword(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={addKeyword} style={{ ...S.btn, ...S.btnGold }}>Hinzufügen</button></div></Modal>
+    </div>
+  );
+};
+
+const SOPs = ({ data, actions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [form, setForm] = useState({ title: '', steps: [''] });
+  const [editIdx, setEditIdx] = useState(-1);
+
+  const addStep = () => setForm(f => ({ ...f, steps: [...f.steps, ''] }));
+  const updateStep = (i, val) => { const s = [...form.steps]; s[i] = val; setForm(f => ({ ...f, steps: s })); };
+  const removeStep = (i) => setForm(f => ({ ...f, steps: f.steps.filter((_, idx) => idx !== i) }));
+
+  const save = () => {
+    if (!form.title.trim()) return;
+    const sop = { id: uid(), title: form.title, steps: form.steps.filter(s => s.trim()) };
+    const newSops = editIdx >= 0 ? data.sops.map((s, i) => i === editIdx ? sop : s) : [...data.sops, sop];
+    // We need to update sops directly in data - using a workaround via localStorage
+    const d = JSON.parse(localStorage.getItem('elevo-v7'));
+    d.sops = newSops;
+    localStorage.setItem('elevo-v7', JSON.stringify(d));
+    window.location.reload();
+  };
+
+  const removeSop = (i) => {
+    const d = JSON.parse(localStorage.getItem('elevo-v7'));
+    d.sops = d.sops.filter((_, idx) => idx !== i);
+    localStorage.setItem('elevo-v7', JSON.stringify(d));
+    window.location.reload();
+  };
+
+  const openEdit = (i) => { setForm({ title: data.sops[i].title, steps: [...data.sops[i].steps] }); setEditIdx(i); setShowEdit(true); };
+
+  return (
+    <div style={S.page}>
+      <PageHeader title="SOPs" sub={`${data.sops.length} Prozesse`}>
+        <button onClick={() => { setForm({ title: '', steps: [''] }); setEditIdx(-1); setShowAdd(true); }} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue SOP</button>
+      </PageHeader>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+        {data.sops.map((s, si) => (
+          <div key={s.id} style={S.card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>{s.title}</h3>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => openEdit(si)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button>
+                <button onClick={() => removeSop(si)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button>
+              </div>
+            </div>
+            {s.steps.map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
+                <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{step}</span>
               </div>
             ))}
           </div>
         ))}
       </div>
-      <div style={S.card}>
-        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Kontaktlisten</h3>
-        {data.outreach.lists.map((l, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontFamily: font.body, fontSize: 13, color: C.text }}>{l.name}</span>
-            <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{l.count} Kontakte • {l.source}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </PlaceholderPage>
-);
-
-const Ads = ({ data }) => (
-  <PlaceholderPage title="Google Ads">
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-      <StatCard label="Budget" value={`${data.ads.budget}€`} sub="pro Monat" />
-      <StatCard label="Region" value={data.ads.region} sub={`Ausgeschlossen: ${data.ads.excluded.join(', ')}`} color={C.blue} />
-    </div>
-    <div style={S.card}>
-      <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Kampagnen</h3>
-      <table style={S.table}><thead><tr><th style={S.th}>Kampagne</th><th style={S.th}>Status</th><th style={S.th}>Budget</th><th style={S.th}>Klicks</th><th style={S.th}>Impressions</th><th style={S.th}>CTR</th><th style={S.th}>Conv.</th></tr></thead>
-        <tbody>{data.ads.campaigns.map((c, i) => (
-          <tr key={i}><td style={S.td}>{c.name}</td><td style={S.td}>{statusBadge(c.status)}</td><td style={{ ...S.td, color: C.gold }}>{c.budget}€</td><td style={S.td}>{c.clicks}</td><td style={S.td}>{c.impressions}</td><td style={S.td}>{c.ctr}%</td><td style={S.td}>{c.conversions}</td></tr>
-        ))}</tbody></table>
-    </div>
-    <div style={{ ...S.card, marginTop: 16 }}>
-      <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Negative Keywords</h3>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {data.ads.negativeKeywords.map((k, i) => <Badge key={i} variant="red">{k}</Badge>)}
-      </div>
-    </div>
-  </PlaceholderPage>
-);
-
-const SOPs = ({ data }) => (
-  <PlaceholderPage title="SOPs">
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-      {data.sops.map(s => (
-        <div key={s.id} style={S.card}>
-          <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>{s.title}</h3>
-          {s.steps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+      {[showAdd, showEdit].some(Boolean) && (
+        <Modal open={showAdd || showEdit} onClose={() => { setShowAdd(false); setShowEdit(false); }} title={editIdx >= 0 ? 'SOP bearbeiten' : 'Neue SOP'} width={520}>
+          <FormRow label="Titel *"><input style={S.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="z.B. Neuer Lead – Erstansprache" /></FormRow>
+          <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginBottom: 8 }}>Schritte</div>
+          {form.steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
               <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
-              <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{step}</span>
+              <input style={{ ...S.input, flex: 1 }} value={step} onChange={e => updateStep(i, e.target.value)} placeholder={`Schritt ${i + 1}`} />
+              {form.steps.length > 1 && <button onClick={() => removeStep(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.x, { size: 14, color: C.textMuted })}</button>}
             </div>
           ))}
-        </div>
-      ))}
+          <button onClick={addStep} style={{ ...S.btn, ...S.btnGhost, fontSize: 11, marginTop: 4 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.textDim })} Schritt</button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <button onClick={() => { setShowAdd(false); setShowEdit(false); }} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+            <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          </div>
+        </Modal>
+      )}
     </div>
-  </PlaceholderPage>
-);
+  );
+};
 
-const Finances = ({ data }) => {
+const Finances = ({ data, actions }) => {
+  const [showAddCost, setShowAddCost] = useState(false);
+  const [showAddRevenue, setShowAddRevenue] = useState(false);
+  const [costForm, setCostForm] = useState({ name: '', amount: 0, category: 'Tools' });
+  const [revForm, setRevForm] = useState({ name: '', amount: 0, date: '', source: '' });
+
   const total = data.finances.fixcosts.reduce((s, f) => s + f.amount, 0);
+  const totalRev = (data.finances.revenue || []).reduce((s, r) => s + r.amount, 0);
+
+  const saveCost = () => {
+    if (!costForm.name.trim()) return;
+    actions.updateFinances({ fixcosts: [...data.finances.fixcosts, { ...costForm, amount: Number(costForm.amount) || 0 }] });
+    setShowAddCost(false); setCostForm({ name: '', amount: 0, category: 'Tools' });
+  };
+
+  const removeCost = (i) => { actions.updateFinances({ fixcosts: data.finances.fixcosts.filter((_, idx) => idx !== i) }); };
+
+  const updateCostAmount = (i, amount) => {
+    const fc = [...data.finances.fixcosts]; fc[i] = { ...fc[i], amount: Number(amount) || 0 };
+    actions.updateFinances({ fixcosts: fc });
+  };
+
+  const saveRevenue = () => {
+    if (!revForm.name.trim()) return;
+    actions.updateFinances({ revenue: [...(data.finances.revenue || []), { ...revForm, amount: Number(revForm.amount) || 0, date: revForm.date || new Date().toISOString().slice(0, 10) }] });
+    setShowAddRevenue(false); setRevForm({ name: '', amount: 0, date: '', source: '' });
+  };
+
+  const removeRevenue = (i) => { actions.updateFinances({ revenue: (data.finances.revenue || []).filter((_, idx) => idx !== i) }); };
+
   return (
-    <PlaceholderPage title="Finanzen">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
+    <div style={S.page}>
+      <PageHeader title="Finanzen" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 20 }}>
         <StatCard label="Fixkosten / Monat" value={`${total}€`} color={C.red} />
         <StatCard label="Fixkosten / Jahr" value={`${(total * 12).toLocaleString('de-DE')}€`} color={C.orange} />
-        <StatCard label="Break-Even" value={`${Math.ceil(total / 500)} Deals`} sub="bei Ø 500€ / Deal" color={C.green} />
+        <StatCard label="Umsatz gesamt" value={`${totalRev.toLocaleString('de-DE')}€`} color={C.green} />
+        <StatCard label="Break-Even" value={`${Math.ceil(total / 500)} Deals`} sub="bei Ø 500€/Deal" color={C.blue} />
+        <StatCard label="Gewinn/Verlust" value={`${(totalRev - total).toLocaleString('de-DE')}€`} sub="diesen Monat" color={totalRev >= total ? C.green : C.red} />
       </div>
-      <div style={S.card}>
-        <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Fixkosten</h3>
-        <table style={S.table}><thead><tr><th style={S.th}>Posten</th><th style={S.th}>Kategorie</th><th style={S.th}>Betrag</th></tr></thead>
-          <tbody>{data.finances.fixcosts.map((f, i) => (
-            <tr key={i}><td style={S.td}>{f.name}</td><td style={S.td}><Badge>{f.category}</Badge></td><td style={{ ...S.td, fontWeight: 600, color: f.amount > 0 ? C.red : C.textDim }}>{f.amount}€</td></tr>
-          ))}</tbody></table>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Fixkosten</h3>
+            <button onClick={() => setShowAddCost(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Kosten</button>
+          </div>
+          <table style={S.table}><thead><tr><th style={S.th}>Posten</th><th style={S.th}>Kategorie</th><th style={S.th}>Betrag</th><th style={S.th}></th></tr></thead>
+            <tbody>{data.finances.fixcosts.map((f, i) => (
+              <tr key={i}><td style={S.td}>{f.name}</td><td style={S.td}><Badge>{f.category}</Badge></td><td style={S.td}><input style={{ ...S.input, width: 70, textAlign: 'right', padding: '3px 6px', fontSize: 12 }} type="number" value={f.amount} onChange={e => updateCostAmount(i, e.target.value)} />€</td><td style={S.td}><button onClick={() => removeCost(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button></td></tr>
+            ))}</tbody></table>
+          <div style={{ padding: '10px 12px', fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.red, borderTop: `2px solid ${C.border}` }}>Gesamt: {total}€ / Monat</div>
+        </div>
+        <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Umsätze</h3>
+            <button onClick={() => setShowAddRevenue(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Umsatz</button>
+          </div>
+          {(data.finances.revenue || []).length === 0 ? <Empty text="Noch keine Umsätze" /> : (
+            <table style={S.table}><thead><tr><th style={S.th}>Beschreibung</th><th style={S.th}>Betrag</th><th style={S.th}>Datum</th><th style={S.th}></th></tr></thead>
+              <tbody>{(data.finances.revenue || []).map((r, i) => (
+                <tr key={i}><td style={S.td}>{r.name}</td><td style={{ ...S.td, fontWeight: 600, color: C.green }}>{r.amount.toLocaleString('de-DE')}€</td><td style={{ ...S.td, color: C.textDim }}>{r.date && new Date(r.date).toLocaleDateString('de-DE')}</td><td style={S.td}><button onClick={() => removeRevenue(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button></td></tr>
+              ))}</tbody></table>
+          )}
+        </div>
       </div>
-    </PlaceholderPage>
+      <Modal open={showAddCost} onClose={() => setShowAddCost(false)} title="Neue Fixkosten">
+        <FormRow label="Posten *"><input style={S.input} value={costForm.name} onChange={e => setCostForm(f => ({ ...f, name: e.target.value }))} placeholder="z.B. Hosting" /></FormRow>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Betrag (€)"><input style={S.input} type="number" value={costForm.amount} onChange={e => setCostForm(f => ({ ...f, amount: e.target.value }))} /></FormRow>
+          <FormRow label="Kategorie"><select style={S.select} value={costForm.category} onChange={e => setCostForm(f => ({ ...f, category: e.target.value }))}><option>Tools</option><option>Marketing</option><option>Infrastruktur</option><option>Sonstiges</option></select></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddCost(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveCost} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div>
+      </Modal>
+      <Modal open={showAddRevenue} onClose={() => setShowAddRevenue(false)} title="Neuer Umsatz">
+        <FormRow label="Beschreibung *"><input style={S.input} value={revForm.name} onChange={e => setRevForm(f => ({ ...f, name: e.target.value }))} placeholder="z.B. Website Bar Lighthouse" /></FormRow>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormRow label="Betrag (€)"><input style={S.input} type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: e.target.value }))} /></FormRow>
+          <FormRow label="Datum"><input style={S.input} type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></FormRow>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddRevenue(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveRevenue} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div>
+      </Modal>
+    </div>
   );
 };
 
 const Notes = ({ data, actions }) => {
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editText, setEditText] = useState('');
+
+  const save = () => { if (!title.trim()) return; actions.addNote({ title, content: text }); setTitle(''); setText(''); };
+  const startEdit = (n) => { setEditId(n.id); setEditTitle(n.title); setEditText(n.content); };
+  const saveEdit = () => {
+    const d = JSON.parse(localStorage.getItem('elevo-v7'));
+    d.notes = d.notes.map(n => n.id === editId ? { ...n, title: editTitle, content: editText } : n);
+    localStorage.setItem('elevo-v7', JSON.stringify(d));
+    setEditId(null); window.location.reload();
+  };
+
   return (
-    <PlaceholderPage title="Notizen">
+    <div style={S.page}>
+      <PageHeader title="Notizen" sub={`${data.notes.length} Notizen`} />
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
           <input style={{ ...S.input, flex: 1 }} placeholder="Titel..." value={title} onChange={e => setTitle(e.target.value)} />
-          <button onClick={() => { if (title.trim()) { actions.addNote({ title, content: text }); setTitle(''); setText(''); } }} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
         </div>
-        <textarea style={{ ...S.input, minHeight: 80, resize: 'vertical' }} placeholder="Notiz schreiben..." value={text} onChange={e => setText(e.target.value)} />
+        <textarea style={{ ...S.input, minHeight: 80, resize: 'vertical' }} placeholder="Notiz schreiben..." value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) save(); }} />
       </div>
       {[...data.notes].reverse().map(n => (
         <div key={n.id} style={{ ...S.card, marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <span style={{ fontFamily: font.body, fontSize: 14, fontWeight: 500, color: C.text }}>{n.title}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date(n.created).toLocaleDateString('de-DE')}</span>
-              <button onClick={() => actions.deleteNote(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button>
+          {editId === n.id ? (
+            <div>
+              <input style={{ ...S.input, marginBottom: 8 }} value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              <textarea style={{ ...S.input, minHeight: 60, resize: 'vertical', marginBottom: 8 }} value={editText} onChange={e => setEditText(e.target.value)} />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={() => setEditId(null)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+                <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+              </div>
             </div>
-          </div>
-          <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, whiteSpace: 'pre-wrap' }}>{n.content}</div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontFamily: font.body, fontSize: 14, fontWeight: 500, color: C.text }}>{n.title}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted }}>{new Date(n.created).toLocaleDateString('de-DE')}</span>
+                  <button onClick={() => startEdit(n)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button>
+                  <button onClick={() => actions.deleteNote(n.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button>
+                </div>
+              </div>
+              <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, whiteSpace: 'pre-wrap' }}>{n.content}</div>
+            </div>
+          )}
         </div>
       ))}
       {data.notes.length === 0 && <Empty text="Keine Notizen" />}
-    </PlaceholderPage>
+    </div>
   );
 };
 
