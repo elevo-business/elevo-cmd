@@ -229,6 +229,12 @@ export default function App(){
   const[locked,setLocked]=useState(()=>{const d=load();return d&&d.pin?true:false});
   const[pinInput,setPinInput]=useState("");
   const[sideOpen,setSideOpen]=useState(false);
+  const[chatOpen,setChatOpen]=useState(false);
+  const[chatMsgs,setChatMsgs]=useState([]);
+  const[chatInput,setChatInput]=useState("");
+  const[chatLoading,setChatLoading]=useState(false);
+  const chatEndRef=useRef(null);
+  const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("elevo_api_key")||""}catch{return""}});
 
   useEffect(()=>{save(D)},[D]);
   useEffect(()=>{const c=()=>setMob(window.innerWidth<768);c();window.addEventListener("resize",c);return()=>window.removeEventListener("resize",c)},[]);
@@ -243,6 +249,71 @@ export default function App(){
   const totalWarmup=D.outreach.domains.reduce((s,d)=>s+d.warmupDay,0);
   const totalWarmupTarget=D.outreach.domains.reduce((s,d)=>s+d.warmupTarget,0);
   const warmupPct=totalWarmupTarget>0?(totalWarmup/totalWarmupTarget)*100:0;
+
+  const saveApiKey=(k)=>{setApiKey(k);try{localStorage.setItem("elevo_api_key",k)}catch{}};
+
+  const sendChat=async()=>{
+    if(!chatInput.trim()||chatLoading||!apiKey)return;
+    const userMsg={role:"user",content:chatInput};
+    const newMsgs=[...chatMsgs,userMsg];
+    setChatMsgs(newMsgs);setChatInput("");setChatLoading(true);
+    setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);
+
+    const pipelineSum=D.pipeline.filter(d=>!["Verloren","Pausiert"].includes(d.status));
+    const systemPrompt=`Du bist der ELEVO KI-Assistent im Command Center. Du hilfst dem Gründer Mert bei allen geschäftlichen Aufgaben.
+
+ÜBER ELEVO:
+- Beratung + operative Umsetzung für KMU/Mittelstand: Digitalisierung, Vertrieb, Marketing
+- Hauptprodukt: Professionelle Websites (1.200-1.500€)
+- Weitere: Digitaler Audit, Strategie-Sessions
+- Region: Aachen + Umkreis
+- Tonalität: Seriös aber menschlich, Du-Ansprache, kurz & kraftvoll
+- Claim: "Dein digitaler Auftritt ist dein erster Vertriebsmitarbeiter."
+
+AKTUELLE GESCHÄFTSDATEN:
+- Pipeline: ${pipelineSum.length} aktive Deals (${eur(pVal)})
+- Gewonnen: ${eur(wonVal)}
+- Kontakte: ${D.contacts.length}
+- Projekte: ${D.projects.length} (${D.projects.filter(p=>p.status==="In Arbeit").length} in Arbeit)
+- Websites: ${D.websites.length} (${D.websites.filter(w=>w.status==="Live").length} live)
+- Monatliche Kosten: ${eur(monthlyCost)}
+- E-Mail Warmup: ${Math.round(warmupPct)}% abgeschlossen
+- Outreach: ${D.outreach.stats.totalSent} gesendet, ${D.outreach.stats.replied} Antworten, ${D.outreach.stats.leads} Leads
+- Offene Tasks: ${D.tasks.filter(t=>!t.done).length} (${D.tasks.filter(t=>!t.done&&t.priority==="Hoch").length} dringend)
+
+AKQUISE-KANÄLE:
+1. Google Ads (${D.ads.budget}€/Monat, Region Aachen, Geilenkirchen ausgeschlossen)
+2. Cold E-Mail Outreach (Instantly.ai, 3 Domains im Warmup)
+3. Loom-Videos an Top-Prospects (5-10/Tag)
+4. 3 Referenz-Websites (Bar, Restaurant, Heilpraktikerin) → Mundpropaganda
+
+DEALS IN PIPELINE:
+${D.pipeline.map(d=>`- ${d.company}: ${d.status}, ${eur(d.volume)}, ${d.service}`).join("\n")}
+
+OFFENE TASKS:
+${D.tasks.filter(t=>!t.done).slice(0,10).map(t=>`- [${t.priority}] ${t.text}`).join("\n")}
+
+Antworte auf Deutsch. Sei direkt, präzise, professionell. Gib konkrete Handlungsempfehlungen. Wenn du Angebote, E-Mails oder Texte schreibst, nutze die ELEVO-Tonalität.`;
+
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2048,system:systemPrompt,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})
+      });
+      const data=await res.json();
+      if(data.content){
+        const text=data.content.map(b=>b.text||"").join("\n");
+        setChatMsgs([...newMsgs,{role:"assistant",content:text}]);
+      }else if(data.error){
+        setChatMsgs([...newMsgs,{role:"assistant",content:`Fehler: ${data.error.message||"API-Fehler"}`}]);
+      }
+    }catch(err){
+      setChatMsgs([...newMsgs,{role:"assistant",content:"Verbindungsfehler. Prüfe deinen API-Key in den Settings."}]);
+    }
+    setChatLoading(false);
+    setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);
+  };
 
   /* ─── PIN LOCK ─── */
   if(locked){
@@ -695,6 +766,16 @@ export default function App(){
   const SettingsPage=()=>{
     const[newPin,setNewPin]=useState("");
     return(<div className="fade">
+      <Section title="KI-ASSISTENT">
+        <Card sx={{padding:16}}>
+          <div style={{color:C.off,fontSize:12,marginBottom:10}}>Claude API-Key für den eingebauten KI-Assistenten. Dein Key wird nur lokal gespeichert.</div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <input type="password" value={apiKey} onChange={e=>saveApiKey(e.target.value)} placeholder="sk-ant-..." style={{flex:1,padding:"8px 12px",background:C.card,border:`1px solid ${C.border}`,borderRadius:6,color:C.white,fontSize:12,fontFamily:"'DM Sans',sans-serif"}}/>
+            {apiKey&&<Badge color={C.green}>Verbunden</Badge>}
+          </div>
+          {!apiKey&&<div style={{color:C.orange,fontSize:10,marginTop:6}}>Ohne API-Key ist der KI-Assistent deaktiviert. Hol dir deinen Key auf console.anthropic.com</div>}
+        </Card>
+      </Section>
       <Section title="SICHERHEIT">
         <Card sx={{padding:16}}>
           <div style={{color:C.off,fontSize:12,marginBottom:10}}>PIN-Schutz: {D.pin?"Aktiv ✓":"Nicht gesetzt"}</div>
@@ -717,9 +798,9 @@ export default function App(){
         <Card sx={{padding:16}}>
           <div style={{color:C.accent,fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:700,letterSpacing:".2em",marginBottom:8}}>E L E V O</div>
           <div style={{color:C.off,fontSize:12,lineHeight:1.8}}>
-            Command Center v6.1 · Production Build<br/>
-            11 Module: Dashboard · Pipeline · Kontakte · Cold Outreach · Google Ads · Projekte · Websites · Tasks · SOPs · Finanzen · Notizen<br/>
-            Deployed via Coolify auf Hetzner CX33
+            Command Center v6.2 · Production Build + KI-Assistent<br/>
+            12 Module: Dashboard · Pipeline · Kontakte · Cold Outreach · Google Ads · Projekte · Websites · Tasks · SOPs · Finanzen · Notizen + KI Co-Pilot<br/>
+            Deployed via Coolify auf Netcup VPS
           </div>
         </Card>
       </Section>
@@ -872,6 +953,55 @@ export default function App(){
       {modal==="task"&&<TaskModal/>}
       {modal==="project"&&<ProjectModal/>}
       {modal==="website"&&<WebsiteModal/>}
+
+      {/* KI CHAT BUTTON */}
+      {apiKey&&<div onClick={()=>setChatOpen(!chatOpen)} style={{position:"fixed",bottom:mob?70:24,right:24,width:52,height:52,borderRadius:26,background:chatOpen?C.red:C.accent,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:60,boxShadow:"0 4px 20px rgba(0,0,0,.4)",transition:"all .2s"}}>
+        <span style={{fontSize:22,color:chatOpen?C.white:C.bg}}>{chatOpen?"✕":"◆"}</span>
+      </div>}
+
+      {/* KI CHAT PANEL */}
+      {chatOpen&&apiKey&&<div style={{position:"fixed",bottom:mob?70:24,right:mob?0:24,width:mob?"100%":420,height:mob?"calc(100vh - 70px)":"min(600px, calc(100vh - 80px))",background:C.panel,border:`1px solid ${C.border}`,borderRadius:mob?0:12,display:"flex",flexDirection:"column",zIndex:55,boxShadow:"0 8px 40px rgba(0,0,0,.5)",overflow:"hidden"}}>
+        {/* Header */}
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:28,height:28,borderRadius:14,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:14}}>◆</div>
+            <div><div style={{color:C.white,fontSize:13,fontWeight:600}}>ELEVO KI</div><div style={{color:C.dim,fontSize:9}}>Dein Co-Pilot</div></div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <div onClick={()=>setChatMsgs([])} style={{cursor:"pointer",color:C.dim,fontSize:11,padding:"4px 8px",borderRadius:4,border:`1px solid ${C.border}`}}>Leeren</div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div style={{flex:1,overflow:"auto",padding:16,display:"flex",flexDirection:"column",gap:10}}>
+          {chatMsgs.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:C.dim}}>
+            <div style={{fontSize:28,marginBottom:8,opacity:.3}}>◆</div>
+            <div style={{fontSize:13,marginBottom:16}}>Was kann ich für dich tun?</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {["Schreib ein Angebot für eine KMU-Website","Follow-up Mail an einen Lead","Was sollte mein nächster Schritt sein?","Analysiere meine Pipeline"].map(p=><div key={p} onClick={()=>{setChatInput(p)}} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 14px",textAlign:"left",color:C.off,fontSize:11,cursor:"pointer"}}>{p}</div>)}
+            </div>
+          </div>}
+          {chatMsgs.map((m,i)=><div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"85%"}}>
+            <div style={{background:m.role==="user"?C.accentDim:C.card,border:`1px solid ${m.role==="user"?C.accentSoft:C.border}`,borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",padding:"10px 14px"}}>
+              <div style={{color:m.role==="user"?C.accent:C.off,fontSize:12,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{m.content}</div>
+            </div>
+          </div>)}
+          {chatLoading&&<div style={{alignSelf:"flex-start"}}>
+            <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:"12px 12px 12px 2px",padding:"10px 14px"}}>
+              <div style={{color:C.accent,fontSize:12}}>Denkt nach...</div>
+            </div>
+          </div>}
+          <div ref={chatEndRef}/>
+        </div>
+
+        {/* Input */}
+        <div style={{padding:12,borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+          <div style={{display:"flex",gap:8}}>
+            <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat()}}} placeholder="Frag mich was..." style={{flex:1,padding:"10px 14px",background:C.card,border:`1px solid ${C.border}`,borderRadius:8,color:C.white,fontSize:12,fontFamily:"'DM Sans',sans-serif"}}/>
+            <button onClick={sendChat} disabled={chatLoading||!chatInput.trim()} style={{padding:"10px 16px",background:C.accent,color:C.bg,border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:chatLoading?"not-allowed":"pointer",opacity:chatLoading||!chatInput.trim()?.4:1,fontFamily:"'DM Sans',sans-serif"}}>→</button>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }
