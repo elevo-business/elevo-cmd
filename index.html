@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Aktuell (Gold-Theme) + Neu (CI-Blau) — beide geladen für Übergang -->
+    <!-- ELEVO CI Blue Theme -->
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -27,7 +27,7 @@
       }
 
       body {
-        background: #0A0A0C;
+        background: #06080C;
         color: #e8e6e1;
         overflow: hidden;
       }
@@ -52,23 +52,23 @@
       }
       * {
         scrollbar-width: thin;
-        scrollbar-color: rgba(255,255,255,.07) transparent;
+        scrollbar-color: rgba(59,130,246,.1) transparent;
       }
 
       /* ═══ SELECTION ═══ */
       ::selection {
-        background: rgba(212,168,83,.25);
+        background: rgba(59,130,246,.25);
         color: #fff;
       }
 
       /* ═══ FOCUS STATES ═══ */
       input:focus, textarea:focus, select:focus {
-        border-color: rgba(212,168,83,.45) !important;
-        box-shadow: 0 0 0 3px rgba(212,168,83,.07);
+        border-color: rgba(59,130,246,.45) !important;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.07);
         outline: none;
       }
       button:focus-visible {
-        outline: 2px solid rgba(212,168,83,.35);
+        outline: 2px solid rgba(59,130,246,.35);
         outline-offset: 2px;
       }
 
@@ -91,7 +91,7 @@
         color: inherit;
       }
       input::placeholder, textarea::placeholder {
-        color: rgba(138,138,142,.5);
+        color: rgba(136,145,165,.5);
         transition: opacity .2s;
       }
       input:focus::placeholder, textarea:focus::placeholder {
@@ -167,10 +167,7 @@
         body { background: #fff; color: #000; }
         nav, aside, [style*="position: fixed"] { display: none !important; }
       }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  </head>
+    </style>  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
