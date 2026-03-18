@@ -1472,11 +1472,10 @@ const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
   }, [open]);
 
   useEffect(() => {
-    if (window.jspdf) { setReady(true); return; }
-    const s1 = document.createElement('script');
-    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
-    s1.onload = () => { const s2 = document.createElement('script'); s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'; s2.onload = () => setReady(true); document.head.appendChild(s2); };
-    document.head.appendChild(s1);
+  const check = () => { if (window.jspdf && window.jspdf.jsPDF && typeof window.jspdf.jsPDF === 'function') { setReady(true); return true; } return false; };
+    if (check()) return;
+    const loadScript = (src) => new Promise((resolve, reject) => { if (document.querySelector('script[src="' + src + '"]')) { setTimeout(resolve, 200); return; } const s = document.createElement('script'); s.src = src; s.onload = () => setTimeout(resolve, 100); s.onerror = reject; document.head.appendChild(s); });
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js').then(() => loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js')).then(() => { let t = 0; const p = setInterval(() => { if (check() || t++ > 30) clearInterval(p); }, 200); }).catch(e => console.error('jsPDF load failed:', e));
   }, []);
 
   const netto = leist.reduce((s, l) => s + (l.price || 0), 0);
