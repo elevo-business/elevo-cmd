@@ -23,6 +23,20 @@ const ACTIVITY_TYPES = ['Anruf', 'E-Mail', 'Loom', 'Meeting', 'Notiz', 'Follow-u
 const TASK_CATEGORIES = ['Outreach', 'Ads', 'Projekt', 'Vertrieb', 'Admin'];
 const SERVICES = ['Website', 'SEO', 'Google Ads', 'Beratung', 'Komplett-Paket'];
 
+const LEISTUNG_VORLAGEN = [
+  { name: 'Website Design & Entwicklung', desc: 'Individuelles Webdesign, Responsive, SEO-Grundstruktur, Kontaktformular, CMS-frei', price: 1500 },
+  { name: 'Content & Texte', desc: 'Professionelle Webtexte, Headlines, Leistungsbeschreibungen, CTAs', price: 400 },
+  { name: 'SEO-Grundoptimierung', desc: 'Keyword-Recherche, Meta-Tags, Schema.org, Alt-Tags, Ladezeit', price: 300 },
+  { name: 'Google Ads Setup', desc: 'Kampagnenstruktur, Keywords, Anzeigentexte, Conversion-Tracking', price: 500 },
+  { name: 'Logo & Branding', desc: 'Logodesign, Farbpalette, Typografie, Brand Guidelines', price: 600 },
+  { name: 'Hosting & Wartung (mtl.)', desc: 'Hosting, SSL, Updates, Monitoring, Backups', price: 29 },
+  { name: 'Prozessdigitalisierung', desc: 'Workflow-Analyse, Tool-Setup, Automatisierungen, Schulung', price: 2500 },
+];
+
+const fmtCur = (v) => v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' \u20AC';
+const fmtDe = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const genAngebotNr = () => `ELEVO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`;
+
 // ============================================================================
 // ICONS (compact SVG components)
 // ============================================================================
@@ -1310,6 +1324,270 @@ const Pipeline = ({ data, helpers, actions }) => {
 };
 
 // ============================================================================
+// ANGEBOT PDF GENERATOR (ELEVO CI — Blue)
+// ============================================================================
+function buildAngebotPDF(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, ML = 25, MR = 25, CW = W - ML - MR;
+  const ACC = [59, 130, 246], HBG = [240, 245, 255], DK = [17, 24, 39], MUT = [136, 153, 176], DIM = [81, 97, 121], LN = [226, 232, 240];
+  let y = 0;
+  const ck = (n) => { if (y + n > 272) { doc.addPage(); y = 30; doc.setFillColor(...ACC); doc.rect(0, 0, W, 1.5, 'F'); } };
+  const aLine = (yy) => { doc.setDrawColor(...ACC); doc.setLineWidth(0.4); doc.line(ML, yy, W - MR, yy); };
+  const secT = (t, yy) => { ck(20); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ACC); doc.text(t.toUpperCase().split('').join('  '), ML, yy); return yy + 8; };
+  const bPara = (t, yy, o = {}) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(o.s || 10); doc.setTextColor(...(o.c || [55, 65, 81])); const ls = doc.splitTextToSize(t, CW); ls.forEach((l, i) => { ck(5); doc.text(l, ML, yy + i * 5); }); return yy + ls.length * 5 + 4; };
+
+  // Cover
+  doc.setFillColor(...ACC); doc.rect(0, 0, W, 3, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(36); doc.setCharSpace(6);
+  doc.setTextColor(...DIM); doc.text('ELE', ML, 70);
+  const ew = doc.getTextWidth('ELE'); doc.setTextColor(...ACC); doc.text('V', ML + ew, 70);
+  const vw = doc.getTextWidth('V'); doc.setTextColor(...DIM); doc.text('O', ML + ew + vw, 70);
+  doc.setCharSpace(0);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...DIM); doc.setCharSpace(0.8);
+  doc.text('Digital  \u00B7  Strategie  \u00B7  Umsetzung', ML, 78); doc.setCharSpace(0);
+  aLine(90);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUT); doc.setCharSpace(1.5); doc.text('ANGEBOT', ML, 106); doc.setCharSpace(0);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(24); doc.setTextColor(...DK);
+  doc.splitTextToSize(d.projektTitel, CW).forEach((l, i) => doc.text(l, ML, 120 + i * 10));
+
+  let my = 146;
+  [['Kunde:', d.companyName], ['Ansprechpartner:', d.contactName], ['Erstellt am:', d.datum], ['Angebots-Nr.:', d.angebotNr], ['G\u00FCltig bis:', d.gueltigBis]].forEach(([lb, vl]) => {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...MUT); doc.text(lb, ML, my);
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(...DK); doc.text(vl, ML + 38, my); my += 7;
+  });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...DIM);
+  doc.text('ELEVO  |  ' + d.absenderName, ML, 258);
+  doc.text(d.absenderEmail + '  |  ' + d.absenderTelefon + '  |  elevo.solutions', ML, 264);
+  aLine(270);
+
+  // Content
+  doc.addPage(); y = 30; doc.setFillColor(...ACC); doc.rect(0, 0, W, 1.5, 'F');
+  y = secT('Ausgangslage', y); y = bPara(d.ausgangslage || '\u2014', y); y += 4;
+  y = secT('Zielsetzung', y); y = bPara(d.zielsetzung || '\u2014', y); y += 4;
+  y = secT('Leistungsumfang', y); y = bPara('Das Projekt umfasst folgende Leistungen:', y); y += 2;
+
+  d.leistungen.forEach((l, i) => {
+    ck(18);
+    doc.setFillColor(...ACC); doc.roundedRect(ML, y - 4, 7, 7, 1.5, 1.5, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+    doc.text(String(i + 1), ML + 3.5, y + 0.5, { align: 'center' });
+    doc.setFontSize(10); doc.setTextColor(...DK); doc.text(l.name, ML + 11, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUT);
+    doc.splitTextToSize(l.desc, CW - 11).forEach(ln => { ck(5); doc.text(ln, ML + 11, y); y += 4.5; }); y += 3;
+  });
+
+  // Zeitplan
+  y += 2; y = secT('Zeitplan', y); ck(10 + d.zeitplan.length * 8);
+  doc.autoTable({ startY: y, margin: { left: ML, right: MR }, head: [['Phase', 'Beschreibung', 'Dauer']],
+    body: d.zeitplan.map((z, i) => [String(i + 1), z.phase, z.dauer]),
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, textColor: [55, 65, 81], lineColor: LN, lineWidth: 0.15 },
+    headStyles: { fillColor: HBG, textColor: ACC, fontStyle: 'bold', lineColor: ACC, lineWidth: 0.25 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: { 0: { cellWidth: 16, halign: 'center', fontStyle: 'bold', textColor: ACC }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 35 } },
+  }); y = doc.lastAutoTable.finalY + 10;
+
+  // Investition
+  const netto = d.leistungen.reduce((s, l) => s + l.price, 0);
+  const ust = Math.round(netto * 19) / 100; const brutto = netto + ust;
+  y = secT('Investition', y); y += 2; ck(10 + d.leistungen.length * 8 + 30);
+  const invB = d.leistungen.map(l => [l.name, '1', fmtCur(l.price)]);
+  invB.push([{ content: '', styles: { lineWidth: 0 } }, { content: 'Netto', styles: { fontStyle: 'bold', halign: 'center' } }, { content: fmtCur(netto), styles: { fontStyle: 'bold', halign: 'right' } }]);
+  invB.push([{ content: '', styles: { lineWidth: 0 } }, { content: 'USt 19 %', styles: { halign: 'center' } }, { content: fmtCur(ust), styles: { halign: 'right' } }]);
+  doc.autoTable({ startY: y, margin: { left: ML, right: MR }, head: [['Position', 'Menge', 'Betrag']], body: invB,
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, textColor: [55, 65, 81], lineColor: LN, lineWidth: 0.15 },
+    headStyles: { fillColor: HBG, textColor: ACC, fontStyle: 'bold', lineColor: ACC, lineWidth: 0.25 },
+    columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 22, halign: 'center' }, 2: { cellWidth: 38, halign: 'right' } },
+  }); y = doc.lastAutoTable.finalY;
+  doc.setDrawColor(...ACC); doc.setLineWidth(0.5); doc.line(ML, y + 1, W - MR, y + 1);
+  doc.setFillColor(...HBG); doc.rect(ML, y + 1.5, CW, 10, 'F'); doc.line(ML, y + 11.5, W - MR, y + 11.5);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...ACC);
+  doc.text('Gesamt (brutto)', ML + CW / 2, y + 8, { align: 'center' }); doc.text(fmtCur(brutto), W - MR - 3, y + 8, { align: 'right' }); y += 20;
+
+  // Zahlungsbedingungen
+  ck(35); y = secT('Zahlungsbedingungen', y); y = bPara('Die Zahlung erfolgt in zwei Raten:', y);
+  doc.autoTable({ startY: y, margin: { left: ML, right: MR },
+    body: [['1. Rate (50 %)', 'Nach Auftragserteilung', fmtCur(brutto / 2)], ['2. Rate (50 %)', 'Nach Go-Live und \u00DCbergabe', fmtCur(brutto / 2)]],
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, textColor: [55, 65, 81], lineColor: LN, lineWidth: 0.15 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 }, 1: { cellWidth: 'auto' }, 2: { cellWidth: 42, halign: 'right', fontStyle: 'bold', textColor: ACC } },
+  }); y = doc.lastAutoTable.finalY + 6;
+  y = bPara('Zahlungsziel: 7 Tage nach Rechnungsstellung. Zahlung per \u00DCberweisung. Alle Betr\u00E4ge verstehen sich zzgl. der gesetzlichen Umsatzsteuer von 19 %.', y, { s: 9, c: MUT }); y += 4;
+
+  // Ablauf
+  ck(50); y = secT('Ablauf der Zusammenarbeit', y);
+  [['Auftragserteilung', 'Best\u00E4tigung per E-Mail, Rechnung \u00FCber Anzahlung (50 %).'],
+   ['Konzeptphase', 'Wettbewerbsanalyse, Seitenstruktur, Content-Strategie.'],
+   ['Umsetzung', 'Design & Entwicklung. Vorschau-Link zur Abstimmung.'],
+   ['Korrekturschleife', 'Eine Korrekturschleife inklusive.'],
+   ['Go-Live', 'Website live, Schlussrechnung, \u00DCbergabe-Dokumentation.']].forEach(([t, desc]) => {
+    ck(14); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ACC); doc.text('\u2014', ML, y);
+    doc.setTextColor(...DK); doc.text(t, ML + 6, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUT);
+    doc.splitTextToSize(desc, CW - 6).forEach(l => { doc.text(l, ML + 6, y); y += 4.5; }); y += 2;
+  });
+
+  // Nächste Schritte
+  ck(35); y += 4; y = secT('N\u00E4chste Schritte', y);
+  ['Angebot best\u00E4tigen per E-Mail an ' + d.absenderEmail, 'Anzahlung \u00FCberweisen (Rechnung folgt nach Best\u00E4tigung)', 'Kickoff-Termin vereinbaren'].forEach((s, i) => {
+    ck(10); doc.setFillColor(...ACC); doc.circle(ML + 3.5, y - 1.5, 3.5, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(255, 255, 255); doc.text(String(i + 1), ML + 3.5, y, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...DK); doc.text(s, ML + 12, y); y += 9;
+  });
+  ck(20); y += 6; aLine(y); y += 8;
+  bPara('Dieses Angebot ist g\u00FCltig bis zum ' + d.gueltigBis + '. Bei Fragen stehen wir jederzeit zur Verf\u00FCgung.', y, { s: 9, c: DIM });
+
+  // Page footers
+  const tp = doc.internal.getNumberOfPages();
+  for (let i = 2; i <= tp; i++) { doc.setPage(i); doc.setFillColor(...ACC); doc.rect(0, 0, W, 1.5, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DIM); doc.text('ELEVO  |  Angebot ' + d.angebotNr, ML, 288); doc.text((i - 1) + ' / ' + (tp - 1), W - MR, 288, { align: 'right' }); }
+  return doc;
+}
+
+const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
+  const [ready, setReady] = useState(!!window.jspdf);
+  const [generating, setGenerating] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const gueltig = new Date(); gueltig.setDate(gueltig.getDate() + 14);
+
+  const [f, setF] = useState({});
+  const [leist, setLeist] = useState([]);
+  const [zeit, setZeit] = useState([]);
+
+  useEffect(() => {
+    if (!open) return;
+    setF({
+      angebotNr: genAngebotNr(), datum: fmtDe(new Date()), gueltigBis: fmtDe(gueltig),
+      companyName: company?.name || '', contactName: contact ? `${contact.firstName} ${contact.lastName}` : '',
+      contactEmail: contact?.email || '', projektTitel: deal?.title || '',
+      ausgangslage: '', zielsetzung: '',
+      absenderName: '[Dein Name]', absenderEmail: 'mail@elevo.solutions', absenderTelefon: '[Telefon]',
+    });
+    setLeist(deal?.service === 'Komplett-Paket'
+      ? [{ name: 'Website Design & Entwicklung', desc: 'Individuelles Webdesign, Responsive, SEO-Grundstruktur', price: 1500 }, { name: 'Content & Texte', desc: 'Professionelle Webtexte, Headlines, CTAs', price: 400 }, { name: 'SEO-Grundoptimierung', desc: 'Keyword-Recherche, Meta-Tags, Schema.org', price: 300 }]
+      : [{ name: deal?.service ? `${deal.service} — Umsetzung` : 'Website Design & Entwicklung', desc: 'Individuell kalkuliert', price: deal?.volume || 0 }]
+    );
+    setZeit([{ phase: 'Analyse & Konzept', dauer: '3 Werktage' }, { phase: 'Design & Entwicklung', dauer: '5 Werktage' }, { phase: 'Content & Texte', dauer: '3 Werktage' }, { phase: 'Korrekturschleife', dauer: '3 Werktage' }, { phase: 'Go-Live & \u00DCbergabe', dauer: '2 Werktage' }]);
+    setSuccess(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (window.jspdf) { setReady(true); return; }
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
+    s1.onload = () => { const s2 = document.createElement('script'); s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'; s2.onload = () => setReady(true); document.head.appendChild(s2); };
+    document.head.appendChild(s1);
+  }, []);
+
+  const netto = leist.reduce((s, l) => s + (l.price || 0), 0);
+  const brutto = netto + Math.round(netto * 19) / 100;
+  const upF = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const upL = (i, k, v) => setLeist(l => l.map((x, j) => j === i ? { ...x, [k]: k === 'price' ? parseFloat(v) || 0 : v } : x));
+
+  const generate = () => {
+    if (!ready) return;
+    setGenerating(true);
+    setTimeout(() => {
+      try {
+        const pdf = buildAngebotPDF({ ...f, leistungen: leist, zeitplan: zeit });
+        pdf.save(`Angebot_${f.angebotNr}_${f.companyName.replace(/\s+/g, '_')}.pdf`);
+        setSuccess(true);
+        actions.addActivity({ companyId: deal?.companyId, contactId: deal?.contactId, dealId: deal?.id, type: 'Notiz', subject: `Angebot ${f.angebotNr} erstellt`, content: `Angebot \u00FCber ${fmtCur(brutto)} (brutto) als PDF generiert.` });
+        setTimeout(() => setSuccess(false), 3000);
+      } catch (e) { alert('Fehler: ' + e.message); }
+      setGenerating(false);
+    }, 100);
+  };
+
+  if (!open) return null;
+
+  return (
+    <Modal open={open} onClose={onClose} title="Angebot erstellen" width={720}>
+      <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 8 }}>
+        {/* Meta */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+          <Badge variant="blue">{f.angebotNr}</Badge>
+          <Badge>{f.datum}</Badge>
+          <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>G\u00FCltig bis {f.gueltigBis}</span>
+        </div>
+
+        {/* Kundendaten */}
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontWeight: 600 }}>Kundendaten</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+          <FormRow label="Firma"><input style={S.input} value={f.companyName || ''} onChange={e => upF('companyName', e.target.value)} /></FormRow>
+          <FormRow label="Ansprechpartner"><input style={S.input} value={f.contactName || ''} onChange={e => upF('contactName', e.target.value)} /></FormRow>
+          <FormRow label="Projekttitel"><input style={S.input} value={f.projektTitel || ''} onChange={e => upF('projektTitel', e.target.value)} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={f.contactEmail || ''} onChange={e => upF('contactEmail', e.target.value)} /></FormRow>
+        </div>
+
+        {/* Texte */}
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontWeight: 600 }}>Projekttexte</div>
+        <FormRow label="Ausgangslage"><textarea style={{ ...S.input, minHeight: 55, resize: 'vertical' }} placeholder="Aktuelle Situation, Probleme, Status quo\u2026" value={f.ausgangslage || ''} onChange={e => upF('ausgangslage', e.target.value)} /></FormRow>
+        <FormRow label="Zielsetzung"><textarea style={{ ...S.input, minHeight: 55, resize: 'vertical' }} placeholder="Was soll erreicht werden?\u2026" value={f.zielsetzung || ''} onChange={e => upF('zielsetzung', e.target.value)} /></FormRow>
+
+        {/* Leistungen */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+          <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Leistungspositionen</div>
+          <button onClick={() => setLeist(l => [...l, { name: '', desc: '', price: 0 }])} style={{ ...S.btn, ...S.btnGhost, padding: '4px 10px', fontSize: 11 }}>+ Position</button>
+        </div>
+        {leist.map((l, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center', padding: 8, background: C.bgHover, borderRadius: 8 }}>
+            <div style={{ flex: 1 }}>
+              <input style={{ ...S.input, fontSize: 12, fontWeight: 500, marginBottom: 4 }} placeholder="Leistung" value={l.name} onChange={e => upL(i, 'name', e.target.value)} />
+              <input style={{ ...S.input, fontSize: 11 }} placeholder="Beschreibung" value={l.desc} onChange={e => upL(i, 'desc', e.target.value)} />
+            </div>
+            <div style={{ width: 90 }}>
+              <input style={{ ...S.input, textAlign: 'right', fontSize: 12, fontWeight: 600 }} type="number" value={l.price || ''} onChange={e => upL(i, 'price', e.target.value)} />
+              <div style={{ fontSize: 9, color: C.textMuted, textAlign: 'right', marginTop: 2 }}>EUR netto</div>
+            </div>
+            <button onClick={() => setLeist(ls => ls.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>{'\u00D7'}</button>
+          </div>
+        ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6, marginBottom: 12 }}>
+          {LEISTUNG_VORLAGEN.map((v, i) => (
+            <button key={i} onClick={() => setLeist(l => [...l, { ...v }])} style={{ ...S.btn, ...S.btnGhost, padding: '3px 8px', fontSize: 10, color: C.textDim }}>{v.name}</button>
+          ))}
+        </div>
+
+        {/* Summe */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: C.goldDim, borderRadius: 8, marginBottom: 16 }}>
+          <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>Gesamt (brutto)</span>
+          <span style={{ fontFamily: font.body, fontSize: 15, fontWeight: 700, color: C.gold }}>{fmtCur(brutto)}</span>
+        </div>
+
+        {/* Zeitplan */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Zeitplan</div>
+          <button onClick={() => setZeit(z => [...z, { phase: '', dauer: '' }])} style={{ ...S.btn, ...S.btnGhost, padding: '4px 10px', fontSize: 11 }}>+ Phase</button>
+        </div>
+        {zeit.map((z, i) => (
+          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
+            <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 700, width: 18, textAlign: 'center' }}>{i + 1}</span>
+            <input style={{ ...S.input, flex: 1, fontSize: 12 }} placeholder="Phase" value={z.phase} onChange={e => setZeit(zz => zz.map((x, j) => j === i ? { ...x, phase: e.target.value } : x))} />
+            <input style={{ ...S.input, width: 110, fontSize: 12 }} placeholder="Dauer" value={z.dauer} onChange={e => setZeit(zz => zz.map((x, j) => j === i ? { ...x, dauer: e.target.value } : x))} />
+            <button onClick={() => setZeit(zz => zz.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 14 }}>{'\u00D7'}</button>
+          </div>
+        ))}
+
+        {/* Absender */}
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8, fontWeight: 600 }}>Absender</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+          <FormRow label="Name"><input style={S.input} value={f.absenderName || ''} onChange={e => upF('absenderName', e.target.value)} /></FormRow>
+          <FormRow label="E-Mail"><input style={S.input} value={f.absenderEmail || ''} onChange={e => upF('absenderEmail', e.target.value)} /></FormRow>
+          <FormRow label="Telefon"><input style={S.input} value={f.absenderTelefon || ''} onChange={e => upF('absenderTelefon', e.target.value)} /></FormRow>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+        <button onClick={onClose} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
+        <button onClick={generate} disabled={!ready || generating} style={{ ...S.btn, ...S.btnGold, opacity: ready ? 1 : 0.5 }}>
+          {generating ? 'Wird erstellt\u2026' : success ? '\u2713 PDF heruntergeladen' : 'PDF generieren'}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+// ============================================================================
 // PAGES — DEAL DETAIL
 // ============================================================================
 const DealDetail = ({ data, helpers, actions }) => {
@@ -1318,6 +1596,7 @@ const DealDetail = ({ data, helpers, actions }) => {
   const deal = helpers.getDeal(id);
   const [logOpen, setLogOpen] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showAngebot, setShowAngebot] = useState(false);
   const [editForm, setEditForm] = useState({});
 
   if (!deal) return <div style={S.page}><BackButton to="/pipeline" /><Empty text="Deal nicht gefunden" /></div>;
@@ -1360,6 +1639,7 @@ const DealDetail = ({ data, helpers, actions }) => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowAngebot(true)} style={{ ...S.btn, background: C.blueDim, color: C.blue }}>{React.cloneElement(Icons.sops, { size: 14, color: C.blue })} Angebot</button>
           <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
           <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
         </div>
@@ -1415,6 +1695,8 @@ const DealDetail = ({ data, helpers, actions }) => {
       </div>
 
       <QuickLogModal open={logOpen} onClose={() => setLogOpen(false)} companyId={deal.companyId} contactId={deal.contactId} dealId={id} contacts={companyContacts} deals={[deal]} actions={actions} />
+
+      <AngebotModal open={showAngebot} onClose={() => setShowAngebot(false)} deal={deal} company={company} contact={contact} actions={actions} />
 
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Deal bearbeiten" width={520}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
