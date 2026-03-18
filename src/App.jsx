@@ -5,18 +5,20 @@ import { Routes, Route, Link, useNavigate, useParams, useLocation } from 'react-
 // CONSTANTS
 // ============================================================================
 const C = {
-  bg: '#0A0A0C', bgCard: '#111114', bgHover: '#1a1a1f', bgInput: '#0d0d10',
-  border: '#1e1e24', borderLight: '#2a2a32',
-  gold: '#D4A853', goldDim: 'rgba(212,168,83,0.15)', goldHover: '#e0b96a',
-  text: '#e8e6e1', textDim: '#8a8a8e', textMuted: '#5a5a5e',
-  green: '#4ade80', greenDim: 'rgba(74,222,128,0.15)',
-  red: '#f87171', redDim: 'rgba(248,113,113,0.15)',
-  blue: '#60a5fa', blueDim: 'rgba(96,165,250,0.15)',
-  orange: '#fb923c', orangeDim: 'rgba(251,146,60,0.15)',
-  purple: '#a78bfa', purpleDim: 'rgba(167,139,250,0.15)',
+  bg: '#06080C', bgCard: '#0C0F14', bgHover: '#131720', bgInput: '#0A0D12',
+  border: '#1A1F2B', borderLight: '#252B3A',
+  accent: '#3B82F6', accentDim: 'rgba(59,130,246,0.12)', accentHover: '#5B9BFF',
+  accentLight: '#93C5FD', accentDark: '#2563EB',
+  text: '#E8EAF0', textDim: '#8891A5', textMuted: '#505868',
+  green: '#34D399', greenDim: 'rgba(52,211,153,0.12)',
+  red: '#F87171', redDim: 'rgba(248,113,113,0.12)',
+  blue: '#60A5FA', blueDim: 'rgba(96,165,250,0.12)',
+  orange: '#FBBF24', orangeDim: 'rgba(251,191,36,0.12)',
+  purple: '#A78BFA', purpleDim: 'rgba(167,139,250,0.12)',
+  cyan: '#22D3EE', cyanDim: 'rgba(34,211,238,0.12)',
 };
 
-const font = { head: "'Cormorant Garamond', serif", body: "'DM Sans', sans-serif" };
+const font = { head: "'Sora', sans-serif", body: "'Outfit', sans-serif" };
 
 const DEAL_STAGES = ['Lead', 'Kontakt', 'Angebot', 'Verhandlung', 'Gewonnen', 'Verloren'];
 const ACTIVITY_TYPES = ['Anruf', 'E-Mail', 'Loom', 'Meeting', 'Notiz', 'Follow-up', 'Sonstiges'];
@@ -207,7 +209,7 @@ const S = {
   card: { background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px' },
   cardHover: { background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px', cursor: 'pointer', transition: 'all 0.2s' },
   btn: { fontFamily: font.body, fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' },
-  btnGold: { background: C.gold, color: C.bg },
+  btnPrimary: { background: C.accent, color: '#fff' },
   btnGhost: { background: 'transparent', color: C.textDim, border: `1px solid ${C.border}` },
   input: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none', width: '100%' },
   select: { fontFamily: font.body, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgInput, color: C.text, outline: 'none', width: '100%' },
@@ -216,7 +218,7 @@ const S = {
   table: { width: '100%', borderCollapse: 'collapse', fontFamily: font.body, fontSize: 13 },
   th: { textAlign: 'left', padding: '10px 12px', color: C.textDim, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}` },
   td: { padding: '12px', borderBottom: `1px solid ${C.border}`, color: C.text },
-  link: { color: C.gold, textDecoration: 'none', cursor: 'pointer' },
+  link: { color: C.accent, textDecoration: 'none', cursor: 'pointer' },
 };
 
 // ============================================================================
@@ -224,7 +226,7 @@ const S = {
 // ============================================================================
 const Badge = ({ children, variant = 'default' }) => {
   const variants = {
-    default: S.badge(C.goldDim, C.gold),
+    default: S.badge(C.accentDim, C.accent),
     green: S.badge(C.greenDim, C.green),
     red: S.badge(C.redDim, C.red),
     blue: S.badge(C.blueDim, C.blue),
@@ -275,7 +277,7 @@ const BackButton = ({ to, label }) => {
   );
 };
 
-const StatCard = ({ label, value, sub, color = C.gold }) => (
+const StatCard = ({ label, value, sub, color = C.accent }) => (
   <div style={S.card}>
     <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</div>
     <div style={{ fontFamily: font.head, fontSize: 32, fontWeight: 600, color }}>{value}</div>
@@ -286,7 +288,7 @@ const StatCard = ({ label, value, sub, color = C.gold }) => (
 const Tabs = ({ tabs, active, onChange }) => (
   <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.border}`, marginBottom: 20 }}>
     {tabs.map(t => (
-      <button key={t} onClick={() => onChange(t)} style={{ ...S.btn, background: 'none', color: active === t ? C.gold : C.textDim, borderBottom: active === t ? `2px solid ${C.gold}` : '2px solid transparent', borderRadius: 0, padding: '10px 16px', fontSize: 13 }}>{t}</button>
+      <button key={t} onClick={() => onChange(t)} style={{ ...S.btn, background: 'none', color: active === t ? C.accent : C.textDim, borderBottom: active === t ? `2px solid ${C.accent}` : '2px solid transparent', borderRadius: 0, padding: '10px 16px', fontSize: 13 }}>{t}</button>
     ))}
   </div>
 );
@@ -374,7 +376,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
   return (
     <aside style={{ width: collapsed ? 64 : 220, height: '100vh', background: C.bgCard, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', transition: 'width 0.25s ease', overflow: 'hidden', flexShrink: 0 }}>
       <div style={{ padding: collapsed ? '20px 12px' : '20px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={onToggle}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: font.head, fontSize: 18, fontWeight: 700, color: C.bg, flexShrink: 0 }}>E</div>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #3B82F6, #2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: font.head, fontSize: 16, fontWeight: 700, color: '#fff', flexShrink: 0 }}>E</div>
         {!collapsed && <span style={{ fontFamily: font.head, fontSize: 18, fontWeight: 600, color: C.text, letterSpacing: '0.05em' }}>ELEVO</span>}
       </div>
       <nav style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
@@ -384,8 +386,8 @@ const Sidebar = ({ collapsed, onToggle }) => {
           ) : <div key={i} style={{ height: 1, background: C.border, margin: '8px 4px' }} />;
           const active = isActive(item.path);
           return (
-            <Link key={item.path} to={item.path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px 12px' : '8px 12px', borderRadius: 8, textDecoration: 'none', background: active ? C.goldDim : 'transparent', color: active ? C.gold : C.textDim, fontFamily: font.body, fontSize: 13, fontWeight: active ? 500 : 400, transition: 'all 0.15s', marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-              {React.cloneElement(Icons[item.icon], { color: active ? C.gold : C.textDim, size: 16 })}
+            <Link key={item.path} to={item.path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px 12px' : '8px 12px', borderRadius: 8, textDecoration: 'none', background: active ? C.accentDim : 'transparent', color: active ? C.accent : C.textDim, fontFamily: font.body, fontSize: 13, fontWeight: active ? 500 : 400, transition: 'all 0.15s', marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+              {React.cloneElement(Icons[item.icon], { color: active ? C.accent : C.textDim, size: 16 })}
               {!collapsed && item.label}
             </Link>
           );
@@ -504,8 +506,8 @@ const ActivityTimeline = ({ activities }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {activities.map(a => (
         <div key={a.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: C.goldDim, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {React.cloneElement(iconMap[a.type] || Icons.edit, { size: 14, color: C.gold })}
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentDim, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {React.cloneElement(iconMap[a.type] || Icons.edit, { size: 14, color: C.accent })}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -557,7 +559,7 @@ const QuickLogModal = ({ open, onClose, companyId, contactId, dealId, contacts, 
       </FormRow>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button onClick={onClose} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-        <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+        <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
       </div>
     </Modal>
   );
@@ -591,7 +593,7 @@ const Dashboard = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => nav('/companies')} style={{ ...S.btn, ...S.btnGhost, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 13, color: C.textDim })} Firma</button>
-          <button onClick={() => nav('/pipeline')} style={{ ...S.btn, ...S.btnGold, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 13, color: C.bg })} Deal</button>
+          <button onClick={() => nav('/pipeline')} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 13, color: C.bg })} Deal</button>
         </div>
       </div>
 
@@ -633,7 +635,7 @@ const Dashboard = ({ data, helpers, actions }) => {
                   <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name} • {d.service}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</div>
+                  <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.accent }}>{d.volume?.toLocaleString('de-DE')}€</div>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', marginTop: 2 }}>
                     {statusBadge(d.status)}
                     {isOd && <Badge variant="orange">!</Badge>}
@@ -684,7 +686,7 @@ const Dashboard = ({ data, helpers, actions }) => {
                     {statusBadge(p.status)}
                   </div>
                   <div style={{ height: 3, background: C.border, borderRadius: 2 }}>
-                    <div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2, transition: 'width 0.3s' }} />
+                    <div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.accent, borderRadius: 2, transition: 'width 0.3s' }} />
                   </div>
                   <div style={{ fontFamily: font.body, fontSize: 10, color: C.textDim, marginTop: 4 }}>{comp?.name} • {p.progress}%</div>
                 </div>
@@ -746,7 +748,7 @@ const Companies = ({ data, helpers, actions }) => {
           <h1 style={S.pageTitle}>Companies</h1>
           <p style={S.pageSub}>{data.companies.length} Firmen</p>
         </div>
-        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue Firma</button>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue Firma</button>
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -770,7 +772,7 @@ const Companies = ({ data, helpers, actions }) => {
                   <td style={S.td}><span style={{ color: C.textDim }}>{c.address}</span></td>
                   <td style={S.td}><Badge variant="blue">{cts.length}</Badge></td>
                   <td style={S.td}><Badge variant="purple">{dls.length}</Badge></td>
-                  <td style={{ ...S.td, fontWeight: 500, color: vol > 0 ? C.gold : C.textDim }}>{vol > 0 ? `${vol.toLocaleString('de-DE')}€` : '–'}</td>
+                  <td style={{ ...S.td, fontWeight: 500, color: vol > 0 ? C.accent : C.textDim }}>{vol > 0 ? `${vol.toLocaleString('de-DE')}€` : '–'}</td>
                   <td style={S.td}>{statusBadge(c.source)}</td>
                   <td style={S.td}><button onClick={(e) => { e.stopPropagation(); openEdit(c); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button></td>
                 </tr>
@@ -794,7 +796,7 @@ const Companies = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
 
@@ -813,7 +815,7 @@ const Companies = ({ data, helpers, actions }) => {
           <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
           </div>
         </div>
       </Modal>
@@ -876,7 +878,7 @@ const CompanyDetail = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
-          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
         </div>
       </div>
 
@@ -917,13 +919,13 @@ const CompanyDetail = ({ data, helpers, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Deals</h3>
-            <button onClick={() => setShowAddDeal(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Deal</button>
+            <button onClick={() => setShowAddDeal(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Deal</button>
           </div>
           {deals.length === 0 ? <Empty text="Keine Deals" /> : (
             <table style={S.table}><thead><tr><th style={S.th}>Deal</th><th style={S.th}>Status</th><th style={S.th}>Service</th><th style={S.th}>Volumen</th><th style={S.th}>Kontakt</th></tr></thead>
               <tbody>{deals.map(d => {
                 const ct = helpers.getContact(d.contactId);
-                return <tr key={d.id}><td style={S.td}><Link to={`/deals/${d.id}`} style={S.link}>{d.title}</Link></td><td style={S.td}>{statusBadge(d.status)}</td><td style={{ ...S.td, color: C.textDim }}>{d.service}</td><td style={{ ...S.td, fontWeight: 500, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</td><td style={S.td}>{ct && <Link to={`/contacts/${ct.id}`} style={S.link}>{ct.firstName} {ct.lastName}</Link>}</td></tr>;
+                return <tr key={d.id}><td style={S.td}><Link to={`/deals/${d.id}`} style={S.link}>{d.title}</Link></td><td style={S.td}>{statusBadge(d.status)}</td><td style={{ ...S.td, color: C.textDim }}>{d.service}</td><td style={{ ...S.td, fontWeight: 500, color: C.accent }}>{d.volume?.toLocaleString('de-DE')}€</td><td style={S.td}>{ct && <Link to={`/contacts/${ct.id}`} style={S.link}>{ct.firstName} {ct.lastName}</Link>}</td></tr>;
               })}</tbody></table>
           )}
         </div>
@@ -933,7 +935,7 @@ const CompanyDetail = ({ data, helpers, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Kontakte</h3>
-            <button onClick={() => setShowAddContact(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Kontakt</button>
+            <button onClick={() => setShowAddContact(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Kontakt</button>
           </div>
           {contacts.length === 0 ? <Empty text="Keine Kontakte" /> : (
             <table style={S.table}><thead><tr><th style={S.th}>Name</th><th style={S.th}>Position</th><th style={S.th}>E-Mail</th><th style={S.th}>Letzter Kontakt</th></tr></thead>
@@ -955,7 +957,7 @@ const CompanyDetail = ({ data, helpers, actions }) => {
                   <div><span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text }}>{p.name}</span></div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{statusBadge(p.status)}<span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{p.progress}%</span></div>
                 </div>
-                <div style={{ height: 3, background: C.border, borderRadius: 2, marginTop: 6 }}><div style={{ height: '100%', width: `${p.progress}%`, background: C.gold, borderRadius: 2 }} /></div>
+                <div style={{ height: 3, background: C.border, borderRadius: 2, marginTop: 6 }}><div style={{ height: '100%', width: `${p.progress}%`, background: C.accent, borderRadius: 2 }} /></div>
                 {ws.map(w => <div key={w.id} style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginTop: 4 }}>🌐 {w.url} — {w.status}</div>)}
               </div>
             );
@@ -976,7 +978,7 @@ const CompanyDetail = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAddContact(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveContact} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveContact} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
 
@@ -992,7 +994,7 @@ const CompanyDetail = ({ data, helpers, actions }) => {
         <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={dlForm.notes} onChange={e => setDlForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAddDeal(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveDeal} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveDeal} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
 
@@ -1011,7 +1013,7 @@ const CompanyDetail = ({ data, helpers, actions }) => {
           <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
           </div>
         </div>
       </Modal>
@@ -1048,7 +1050,7 @@ const Contacts = ({ data, helpers, actions }) => {
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Kontakte</h1><p style={S.pageSub}>{data.contacts.length} Kontakte</p></div>
-        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Kontakt</button>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Kontakt</button>
       </div>
       <div style={{ marginBottom: 16 }}><input style={{ ...S.input, maxWidth: 320 }} placeholder="Name, E-Mail, Telefon suchen..." value={search} onChange={e => setSearch(e.target.value)} /></div>
       <div style={S.card}>
@@ -1095,7 +1097,7 @@ const Contacts = ({ data, helpers, actions }) => {
         </FormRow>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveContact} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveContact} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
 
@@ -1122,7 +1124,7 @@ const Contacts = ({ data, helpers, actions }) => {
           <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
           </div>
         </div>
       </Modal>
@@ -1164,7 +1166,7 @@ const ContactDetail = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
-          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
         </div>
       </div>
 
@@ -1197,7 +1199,7 @@ const ContactDetail = ({ data, helpers, actions }) => {
                   <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{d.service}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: font.body, fontSize: 13, color: C.gold, fontWeight: 500 }}>{d.volume?.toLocaleString('de-DE')}€</div>
+                  <div style={{ fontFamily: font.body, fontSize: 13, color: C.accent, fontWeight: 500 }}>{d.volume?.toLocaleString('de-DE')}€</div>
                   {statusBadge(d.status)}
                 </div>
               </Link>
@@ -1229,7 +1231,7 @@ const ContactDetail = ({ data, helpers, actions }) => {
           <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
           </div>
         </div>
       </Modal>
@@ -1257,7 +1259,7 @@ const Pipeline = ({ data, helpers, actions }) => {
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Pipeline</h1><p style={S.pageSub}>{data.deals.length} Deals • {helpers.pipelineValue().toLocaleString('de-DE')}€ offen</p></div>
-        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Deal</button>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neuer Deal</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeStages.length}, 1fr)`, gap: 12, overflowX: 'auto' }}>
@@ -1279,7 +1281,7 @@ const Pipeline = ({ data, helpers, actions }) => {
                       <div style={{ fontFamily: font.body, fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{d.title}</div>
                       <div style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{comp?.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                        <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>{d.volume?.toLocaleString('de-DE')}€</span>
+                        <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.accent }}>{d.volume?.toLocaleString('de-DE')}€</span>
                         {isOverdue && <Badge variant="orange">Überfällig</Badge>}
                       </div>
                     </Link>
@@ -1316,7 +1318,7 @@ const Pipeline = ({ data, helpers, actions }) => {
         <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={dlForm.notes} onChange={e => setDlForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveDeal} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveDeal} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
     </div>
@@ -1510,7 +1512,7 @@ const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
         </div>
 
         {/* Kundendaten */}
-        <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontWeight: 600 }}>Kundendaten</div>
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontWeight: 600 }}>Kundendaten</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
           <FormRow label="Firma"><input style={S.input} value={f.companyName || ''} onChange={e => upF('companyName', e.target.value)} /></FormRow>
           <FormRow label="Ansprechpartner"><input style={S.input} value={f.contactName || ''} onChange={e => upF('contactName', e.target.value)} /></FormRow>
@@ -1519,13 +1521,13 @@ const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
         </div>
 
         {/* Texte */}
-        <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontWeight: 600 }}>Projekttexte</div>
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontWeight: 600 }}>Projekttexte</div>
         <FormRow label="Ausgangslage"><textarea style={{ ...S.input, minHeight: 55, resize: 'vertical' }} placeholder="Aktuelle Situation, Probleme, Status quo\u2026" value={f.ausgangslage || ''} onChange={e => upF('ausgangslage', e.target.value)} /></FormRow>
         <FormRow label="Zielsetzung"><textarea style={{ ...S.input, minHeight: 55, resize: 'vertical' }} placeholder="Was soll erreicht werden?\u2026" value={f.zielsetzung || ''} onChange={e => upF('zielsetzung', e.target.value)} /></FormRow>
 
         {/* Leistungen */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
-          <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Leistungspositionen</div>
+          <div style={{ fontFamily: font.body, fontSize: 11, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Leistungspositionen</div>
           <button onClick={() => setLeist(l => [...l, { name: '', desc: '', price: 0 }])} style={{ ...S.btn, ...S.btnGhost, padding: '4px 10px', fontSize: 11 }}>+ Position</button>
         </div>
         {leist.map((l, i) => (
@@ -1548,19 +1550,19 @@ const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
         </div>
 
         {/* Summe */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: C.goldDim, borderRadius: 8, marginBottom: 16 }}>
-          <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.gold }}>Gesamt (brutto)</span>
-          <span style={{ fontFamily: font.body, fontSize: 15, fontWeight: 700, color: C.gold }}>{fmtCur(brutto)}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: C.accentDim, borderRadius: 8, marginBottom: 16 }}>
+          <span style={{ fontFamily: font.body, fontSize: 13, fontWeight: 600, color: C.accent }}>Gesamt (brutto)</span>
+          <span style={{ fontFamily: font.body, fontSize: 15, fontWeight: 700, color: C.accent }}>{fmtCur(brutto)}</span>
         </div>
 
         {/* Zeitplan */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Zeitplan</div>
+          <div style={{ fontFamily: font.body, fontSize: 11, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Zeitplan</div>
           <button onClick={() => setZeit(z => [...z, { phase: '', dauer: '' }])} style={{ ...S.btn, ...S.btnGhost, padding: '4px 10px', fontSize: 11 }}>+ Phase</button>
         </div>
         {zeit.map((z, i) => (
           <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
-            <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 700, width: 18, textAlign: 'center' }}>{i + 1}</span>
+            <span style={{ fontFamily: font.body, fontSize: 11, color: C.accent, fontWeight: 700, width: 18, textAlign: 'center' }}>{i + 1}</span>
             <input style={{ ...S.input, flex: 1, fontSize: 12 }} placeholder="Phase" value={z.phase} onChange={e => setZeit(zz => zz.map((x, j) => j === i ? { ...x, phase: e.target.value } : x))} />
             <input style={{ ...S.input, width: 110, fontSize: 12 }} placeholder="Dauer" value={z.dauer} onChange={e => setZeit(zz => zz.map((x, j) => j === i ? { ...x, dauer: e.target.value } : x))} />
             <button onClick={() => setZeit(zz => zz.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 14 }}>{'\u00D7'}</button>
@@ -1568,7 +1570,7 @@ const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
         ))}
 
         {/* Absender */}
-        <div style={{ fontFamily: font.body, fontSize: 11, color: C.gold, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8, fontWeight: 600 }}>Absender</div>
+        <div style={{ fontFamily: font.body, fontSize: 11, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8, fontWeight: 600 }}>Absender</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
           <FormRow label="Name"><input style={S.input} value={f.absenderName || ''} onChange={e => upF('absenderName', e.target.value)} /></FormRow>
           <FormRow label="E-Mail"><input style={S.input} value={f.absenderEmail || ''} onChange={e => upF('absenderEmail', e.target.value)} /></FormRow>
@@ -1579,7 +1581,7 @@ const AngebotModal = ({ open, onClose, deal, company, contact, actions }) => {
       {/* Actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
         <button onClick={onClose} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-        <button onClick={generate} disabled={!ready || generating} style={{ ...S.btn, ...S.btnGold, opacity: ready ? 1 : 0.5 }}>
+        <button onClick={generate} disabled={!ready || generating} style={{ ...S.btn, ...S.btnPrimary, opacity: ready ? 1 : 0.5 }}>
           {generating ? 'Wird erstellt\u2026' : success ? '\u2713 PDF heruntergeladen' : 'PDF generieren'}
         </button>
       </div>
@@ -1641,7 +1643,7 @@ const DealDetail = ({ data, helpers, actions }) => {
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setShowAngebot(true)} style={{ ...S.btn, background: C.blueDim, color: C.blue }}>{React.cloneElement(Icons.sops, { size: 14, color: C.blue })} Angebot</button>
           <button onClick={openEdit} style={{ ...S.btn, ...S.btnGhost }}>{React.cloneElement(Icons.edit, { size: 14, color: C.textDim })} Bearbeiten</button>
-          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
+          <button onClick={() => setLogOpen(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Aktivität</button>
         </div>
       </div>
 
@@ -1655,7 +1657,7 @@ const DealDetail = ({ data, helpers, actions }) => {
             const isWon = stage === 'Gewonnen';
             const isLost = stage === 'Verloren';
             return (
-              <button key={stage} onClick={() => changeStage(stage)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: isActive ? `2px solid ${isWon ? C.green : isLost ? C.red : C.gold}` : `1px solid ${C.border}`, background: isActive ? (isWon ? C.greenDim : isLost ? C.redDim : C.goldDim) : isPast ? C.bgHover : 'transparent', color: isActive ? (isWon ? C.green : isLost ? C.red : C.gold) : isPast ? C.text : C.textMuted, fontFamily: font.body, fontSize: 12, fontWeight: isActive ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
+              <button key={stage} onClick={() => changeStage(stage)} style={{ flex: 1, padding: '10px 8px', borderRadius: 8, border: isActive ? `2px solid ${isWon ? C.green : isLost ? C.red : C.accent}` : `1px solid ${C.border}`, background: isActive ? (isWon ? C.greenDim : isLost ? C.redDim : C.accentDim) : isPast ? C.bgHover : 'transparent', color: isActive ? (isWon ? C.green : isLost ? C.red : C.accent) : isPast ? C.text : C.textMuted, fontFamily: font.body, fontSize: 12, fontWeight: isActive ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>
                 {stage}
               </button>
             );
@@ -1716,7 +1718,7 @@ const DealDetail = ({ data, helpers, actions }) => {
           <button onClick={handleDelete} style={{ ...S.btn, background: C.redDim, color: C.red }}>{React.cloneElement(Icons.trash, { size: 13, color: C.red })} Löschen</button>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+            <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
           </div>
         </div>
       </Modal>
@@ -1740,7 +1742,7 @@ const Projects = ({ data, helpers, actions }) => {
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Projekte</h1><p style={S.pageSub}>{data.projects.length} Projekte</p></div>
-        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neues Projekt</button>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neues Projekt</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         {data.projects.map(p => {
@@ -1756,7 +1758,7 @@ const Projects = ({ data, helpers, actions }) => {
                 </div>
               </div>
               {comp && <Link to={`/companies/${comp.id}`} style={{ ...S.link, fontSize: 12 }}>{comp.name}</Link>}
-              <div style={{ height: 4, background: C.border, borderRadius: 2, margin: '12px 0 6px' }}><div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.gold, borderRadius: 2 }} /></div>
+              <div style={{ height: 4, background: C.border, borderRadius: 2, margin: '12px 0 6px' }}><div style={{ height: '100%', width: `${p.progress}%`, background: p.progress >= 75 ? C.green : C.accent, borderRadius: 2 }} /></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{p.progress}%</span>
                 {p.deadline && <span style={{ fontFamily: font.body, fontSize: 11, color: C.textDim }}>{new Date(p.deadline).toLocaleDateString('de-DE')}</span>}
@@ -1765,7 +1767,7 @@ const Projects = ({ data, helpers, actions }) => {
               {p.notes && <div style={{ fontFamily: font.body, fontSize: 11, color: C.textMuted, marginTop: 6, fontStyle: 'italic' }}>{p.notes}</div>}
               <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                 {[0, 25, 50, 75, 100].map(v => (
-                  <button key={v} onClick={() => actions.updateProject(p.id, { progress: v, status: v === 100 ? 'Fertig' : v > 0 ? 'In Arbeit' : 'Planung' })} style={{ ...S.btn, padding: '4px 8px', fontSize: 10, ...(p.progress === v ? S.btnGold : S.btnGhost) }}>{v}%</button>
+                  <button key={v} onClick={() => actions.updateProject(p.id, { progress: v, status: v === 100 ? 'Fertig' : v > 0 ? 'In Arbeit' : 'Planung' })} style={{ ...S.btn, padding: '4px 8px', fontSize: 10, ...(p.progress === v ? S.btnPrimary : S.btnGhost) }}>{v}%</button>
                 ))}
               </div>
             </div>
@@ -1783,7 +1785,7 @@ const Projects = ({ data, helpers, actions }) => {
         <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Projekt bearbeiten">
@@ -1796,7 +1798,7 @@ const Projects = ({ data, helpers, actions }) => {
         <FormRow label="Notizen"><textarea style={{ ...S.input, minHeight: 50, resize: 'vertical' }} value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></FormRow>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
     </div>
@@ -1819,13 +1821,13 @@ const Websites = ({ data, helpers, actions }) => {
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Websites</h1><p style={S.pageSub}>{data.websites.length} Websites</p></div>
-        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue Website</button>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue Website</button>
       </div>
       <div style={S.card}>
         <table style={S.table}><thead><tr><th style={S.th}>Name</th><th style={S.th}>URL</th><th style={S.th}>Firma</th><th style={S.th}>Status</th><th style={S.th}>Hosting</th><th style={S.th}>Footer</th><th style={S.th}></th></tr></thead>
           <tbody>{data.websites.map(w => {
             const comp = helpers.getCompany(w.companyId);
-            return <tr key={w.id}><td style={S.td}>{w.name}</td><td style={{ ...S.td, color: C.gold }}>{w.url}</td><td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td><td style={S.td}>{statusBadge(w.status)}</td><td style={{ ...S.td, color: C.textDim }}>{w.hosting}</td><td style={S.td}>{w.footerLink ? '✓' : '–'}</td><td style={S.td}><button onClick={() => { setEditForm({ ...w }); setShowEdit(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button></td></tr>;
+            return <tr key={w.id}><td style={S.td}>{w.name}</td><td style={{ ...S.td, color: C.accent }}>{w.url}</td><td style={S.td}>{comp && <Link to={`/companies/${comp.id}`} style={S.link}>{comp.name}</Link>}</td><td style={S.td}>{statusBadge(w.status)}</td><td style={{ ...S.td, color: C.textDim }}>{w.hosting}</td><td style={S.td}>{w.footerLink ? '✓' : '–'}</td><td style={S.td}><button onClick={() => { setEditForm({ ...w }); setShowEdit(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button></td></tr>;
           })}</tbody></table>
         {data.websites.length === 0 && <Empty text="Keine Websites" />}
       </div>
@@ -1840,7 +1842,7 @@ const Websites = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Website bearbeiten">
@@ -1854,7 +1856,7 @@ const Websites = ({ data, helpers, actions }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowEdit(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
     </div>
@@ -1883,10 +1885,10 @@ const Tasks = ({ data, actions }) => {
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div><h1 style={S.pageTitle}>Tasks</h1><p style={S.pageSub}>{data.tasks.filter(t => !t.done).length} offen von {data.tasks.length}</p></div>
-        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Task</button>
+        <button onClick={() => setShowAdd(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Task</button>
       </div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {cats.map(c => <button key={c} onClick={() => setFilter(c)} style={{ ...S.btn, padding: '6px 12px', fontSize: 12, ...(filter === c ? S.btnGold : S.btnGhost) }}>{c}</button>)}
+        {cats.map(c => <button key={c} onClick={() => setFilter(c)} style={{ ...S.btn, padding: '6px 12px', fontSize: 12, ...(filter === c ? S.btnPrimary : S.btnGhost) }}>{c}</button>)}
       </div>
       <div style={S.card}>
         {sorted.map(t => (
@@ -1914,7 +1916,7 @@ const Tasks = ({ data, actions }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAdd(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
     </div>
@@ -1976,7 +1978,7 @@ const Outreach = ({ data, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Domains & Postfächer</h3>
-            <button onClick={() => setShowAddDomain(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Domain</button>
+            <button onClick={() => setShowAddDomain(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Domain</button>
           </div>
           {data.outreach.domains.map((d, i) => (
             <div key={i} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1994,7 +1996,7 @@ const Outreach = ({ data, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Sequenzen</h3>
-            <button onClick={() => setShowAddSeq(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Sequenz</button>
+            <button onClick={() => setShowAddSeq(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Sequenz</button>
           </div>
           {data.outreach.sequences.map((s, i) => (
             <div key={i} style={{ marginBottom: 12 }}>
@@ -2012,7 +2014,7 @@ const Outreach = ({ data, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Kontaktlisten</h3>
-            <button onClick={() => setShowAddList(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Liste</button>
+            <button onClick={() => setShowAddList(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Liste</button>
           </div>
           {data.outreach.lists.map((l, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
@@ -2036,7 +2038,7 @@ const Outreach = ({ data, actions }) => {
         <FormRow label="Warmup"><select style={S.select} value={domForm.warmup} onChange={e => setDomForm(f => ({ ...f, warmup: e.target.value }))}><option>Aktiv</option><option>Fertig</option><option>Pausiert</option></select></FormRow>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAddDomain(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveDomain} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveDomain} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
       <Modal open={showAddList} onClose={() => setShowAddList(false)} title="Neue Kontaktliste">
@@ -2047,14 +2049,14 @@ const Outreach = ({ data, actions }) => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button onClick={() => setShowAddList(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveList} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveList} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
       <Modal open={showAddSeq} onClose={() => setShowAddSeq(false)} title="Neue Sequenz" width={560}>
         <FormRow label="Sequenzname *"><input style={S.input} value={seqForm.name} onChange={e => setSeqForm(f => ({ ...f, name: e.target.value }))} placeholder="z.B. Webdesign Cold Outreach" /></FormRow>
         {seqForm.steps.map((st, i) => (
           <div key={i} style={{ ...S.card, padding: 12, marginBottom: 8 }}>
-            <div style={{ fontFamily: font.body, fontSize: 11, fontWeight: 600, color: C.gold, marginBottom: 6 }}>Schritt {i + 1}</div>
+            <div style={{ fontFamily: font.body, fontSize: 11, fontWeight: 600, color: C.accent, marginBottom: 6 }}>Schritt {i + 1}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: 8 }}>
               <FormRow label="Tag"><input style={S.input} type="number" value={st.day} onChange={e => { const steps = [...seqForm.steps]; steps[i] = { ...steps[i], day: Number(e.target.value) }; setSeqForm(f => ({ ...f, steps })); }} /></FormRow>
               <FormRow label="Betreff"><input style={S.input} value={st.subject} onChange={e => { const steps = [...seqForm.steps]; steps[i] = { ...steps[i], subject: e.target.value }; setSeqForm(f => ({ ...f, steps })); }} /></FormRow>
@@ -2064,7 +2066,7 @@ const Outreach = ({ data, actions }) => {
         <button onClick={addSeqStep} style={{ ...S.btn, ...S.btnGhost, fontSize: 11, marginBottom: 12 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.textDim })} Schritt</button>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={() => setShowAddSeq(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-          <button onClick={saveSeq} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={saveSeq} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
       </Modal>
     </div>
@@ -2104,7 +2106,7 @@ const Ads = ({ data, actions }) => {
   return (
     <div style={S.page}>
       <PageHeader title="Google Ads" sub={`${data.ads.budget}€/Monat • ${data.ads.region}`}>
-        <button onClick={() => setShowAddCampaign(true)} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Kampagne</button>
+        <button onClick={() => setShowAddCampaign(true)} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Kampagne</button>
       </PageHeader>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
         <StatCard label="Budget" value={`${data.ads.budget}€`} sub="pro Monat" />
@@ -2116,7 +2118,7 @@ const Ads = ({ data, actions }) => {
         <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Kampagnen</h3>
         <table style={S.table}><thead><tr><th style={S.th}>Kampagne</th><th style={S.th}>Status</th><th style={S.th}>Budget</th><th style={S.th}>Klicks</th><th style={S.th}>Impr.</th><th style={S.th}>CTR</th><th style={S.th}>Conv.</th><th style={S.th}></th></tr></thead>
           <tbody>{data.ads.campaigns.map((c, i) => (
-            <tr key={i}><td style={S.td}>{c.name}</td><td style={S.td}>{statusBadge(c.status)}</td><td style={{ ...S.td, color: C.gold }}>{c.budget}€</td><td style={S.td}>{c.clicks}</td><td style={S.td}>{c.impressions}</td><td style={S.td}>{c.ctr}%</td><td style={S.td}>{c.conversions}</td>
+            <tr key={i}><td style={S.td}>{c.name}</td><td style={S.td}>{statusBadge(c.status)}</td><td style={{ ...S.td, color: C.accent }}>{c.budget}€</td><td style={S.td}>{c.clicks}</td><td style={S.td}>{c.impressions}</td><td style={S.td}>{c.ctr}%</td><td style={S.td}>{c.conversions}</td>
             <td style={S.td}><div style={{ display: 'flex', gap: 6 }}><button onClick={() => openEdit(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.edit, { size: 13, color: C.textMuted })}</button><button onClick={() => removeCampaign(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.trash, { size: 13, color: C.textMuted })}</button></div></td></tr>
           ))}</tbody></table>
       </div>
@@ -2131,9 +2133,9 @@ const Ads = ({ data, actions }) => {
           ))}
         </div>
       </div>
-      <Modal open={showAddCampaign} onClose={() => setShowAddCampaign(false)} title="Neue Kampagne"><CampaignFormFields /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddCampaign(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveCampaign} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div></Modal>
-      <Modal open={showEditCampaign} onClose={() => setShowEditCampaign(false)} title="Kampagne bearbeiten"><CampaignFormFields /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowEditCampaign(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveEditCampaign} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div></Modal>
-      <Modal open={showAddKeyword} onClose={() => setShowAddKeyword(false)} title="Negatives Keyword"><FormRow label="Keyword"><input style={S.input} value={kwForm} onChange={e => setKwForm(e.target.value)} placeholder="z.B. kostenlos" onKeyDown={e => e.key === 'Enter' && addKeyword()} /></FormRow><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddKeyword(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={addKeyword} style={{ ...S.btn, ...S.btnGold }}>Hinzufügen</button></div></Modal>
+      <Modal open={showAddCampaign} onClose={() => setShowAddCampaign(false)} title="Neue Kampagne"><CampaignFormFields /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddCampaign(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveCampaign} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button></div></Modal>
+      <Modal open={showEditCampaign} onClose={() => setShowEditCampaign(false)} title="Kampagne bearbeiten"><CampaignFormFields /><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowEditCampaign(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveEditCampaign} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button></div></Modal>
+      <Modal open={showAddKeyword} onClose={() => setShowAddKeyword(false)} title="Negatives Keyword"><FormRow label="Keyword"><input style={S.input} value={kwForm} onChange={e => setKwForm(e.target.value)} placeholder="z.B. kostenlos" onKeyDown={e => e.key === 'Enter' && addKeyword()} /></FormRow><div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddKeyword(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={addKeyword} style={{ ...S.btn, ...S.btnPrimary }}>Hinzufügen</button></div></Modal>
     </div>
   );
 };
@@ -2171,7 +2173,7 @@ const SOPs = ({ data, actions }) => {
   return (
     <div style={S.page}>
       <PageHeader title="SOPs" sub={`${data.sops.length} Prozesse`}>
-        <button onClick={() => { setForm({ title: '', steps: [''] }); setEditIdx(-1); setShowAdd(true); }} style={{ ...S.btn, ...S.btnGold }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue SOP</button>
+        <button onClick={() => { setForm({ title: '', steps: [''] }); setEditIdx(-1); setShowAdd(true); }} style={{ ...S.btn, ...S.btnPrimary }}>{React.cloneElement(Icons.plus, { size: 14, color: C.bg })} Neue SOP</button>
       </PageHeader>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         {data.sops.map((s, si) => (
@@ -2185,7 +2187,7 @@ const SOPs = ({ data, actions }) => {
             </div>
             {s.steps.map((step, i) => (
               <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
-                <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
+                <span style={{ fontFamily: font.body, fontSize: 11, color: C.accent, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
                 <span style={{ fontFamily: font.body, fontSize: 12, color: C.textDim }}>{step}</span>
               </div>
             ))}
@@ -2198,7 +2200,7 @@ const SOPs = ({ data, actions }) => {
           <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, marginBottom: 8 }}>Schritte</div>
           {form.steps.map((step, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
-              <span style={{ fontFamily: font.body, fontSize: 11, color: C.gold, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
+              <span style={{ fontFamily: font.body, fontSize: 11, color: C.accent, fontWeight: 600, minWidth: 20 }}>{i + 1}.</span>
               <input style={{ ...S.input, flex: 1 }} value={step} onChange={e => updateStep(i, e.target.value)} placeholder={`Schritt ${i + 1}`} />
               {form.steps.length > 1 && <button onClick={() => removeStep(i)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>{React.cloneElement(Icons.x, { size: 14, color: C.textMuted })}</button>}
             </div>
@@ -2206,7 +2208,7 @@ const SOPs = ({ data, actions }) => {
           <button onClick={addStep} style={{ ...S.btn, ...S.btnGhost, fontSize: 11, marginTop: 4 }}>{React.cloneElement(Icons.plus, { size: 12, color: C.textDim })} Schritt</button>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button onClick={() => { setShowAdd(false); setShowEdit(false); }} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-            <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+            <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
           </div>
         </Modal>
       )}
@@ -2258,7 +2260,7 @@ const Finances = ({ data, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Fixkosten</h3>
-            <button onClick={() => setShowAddCost(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Kosten</button>
+            <button onClick={() => setShowAddCost(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Kosten</button>
           </div>
           <table style={S.table}><thead><tr><th style={S.th}>Posten</th><th style={S.th}>Kategorie</th><th style={S.th}>Betrag</th><th style={S.th}></th></tr></thead>
             <tbody>{data.finances.fixcosts.map((f, i) => (
@@ -2269,7 +2271,7 @@ const Finances = ({ data, actions }) => {
         <div style={S.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: 0 }}>Umsätze</h3>
-            <button onClick={() => setShowAddRevenue(true)} style={{ ...S.btn, ...S.btnGold, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Umsatz</button>
+            <button onClick={() => setShowAddRevenue(true)} style={{ ...S.btn, ...S.btnPrimary, fontSize: 11, padding: '5px 10px' }}>{React.cloneElement(Icons.plus, { size: 12, color: C.bg })} Umsatz</button>
           </div>
           {(data.finances.revenue || []).length === 0 ? <Empty text="Noch keine Umsätze" /> : (
             <table style={S.table}><thead><tr><th style={S.th}>Beschreibung</th><th style={S.th}>Betrag</th><th style={S.th}>Datum</th><th style={S.th}></th></tr></thead>
@@ -2285,7 +2287,7 @@ const Finances = ({ data, actions }) => {
           <FormRow label="Betrag (€)"><input style={S.input} type="number" value={costForm.amount} onChange={e => setCostForm(f => ({ ...f, amount: e.target.value }))} /></FormRow>
           <FormRow label="Kategorie"><select style={S.select} value={costForm.category} onChange={e => setCostForm(f => ({ ...f, category: e.target.value }))}><option>Tools</option><option>Marketing</option><option>Infrastruktur</option><option>Sonstiges</option></select></FormRow>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddCost(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveCost} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddCost(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveCost} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button></div>
       </Modal>
       <Modal open={showAddRevenue} onClose={() => setShowAddRevenue(false)} title="Neuer Umsatz">
         <FormRow label="Beschreibung *"><input style={S.input} value={revForm.name} onChange={e => setRevForm(f => ({ ...f, name: e.target.value }))} placeholder="z.B. Website Bar Lighthouse" /></FormRow>
@@ -2293,7 +2295,7 @@ const Finances = ({ data, actions }) => {
           <FormRow label="Betrag (€)"><input style={S.input} type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: e.target.value }))} /></FormRow>
           <FormRow label="Datum"><input style={S.input} type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></FormRow>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddRevenue(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveRevenue} style={{ ...S.btn, ...S.btnGold }}>Speichern</button></div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}><button onClick={() => setShowAddRevenue(false)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button><button onClick={saveRevenue} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button></div>
       </Modal>
     </div>
   );
@@ -2321,7 +2323,7 @@ const Notes = ({ data, actions }) => {
       <div style={{ ...S.card, marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
           <input style={{ ...S.input, flex: 1 }} placeholder="Titel..." value={title} onChange={e => setTitle(e.target.value)} />
-          <button onClick={save} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+          <button onClick={save} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
         </div>
         <textarea style={{ ...S.input, minHeight: 80, resize: 'vertical' }} placeholder="Notiz schreiben..." value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) save(); }} />
       </div>
@@ -2333,7 +2335,7 @@ const Notes = ({ data, actions }) => {
               <textarea style={{ ...S.input, minHeight: 60, resize: 'vertical', marginBottom: 8 }} value={editText} onChange={e => setEditText(e.target.value)} />
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button onClick={() => setEditId(null)} style={{ ...S.btn, ...S.btnGhost }}>Abbrechen</button>
-                <button onClick={saveEdit} style={{ ...S.btn, ...S.btnGold }}>Speichern</button>
+                <button onClick={saveEdit} style={{ ...S.btn, ...S.btnPrimary }}>Speichern</button>
               </div>
             </div>
           ) : (
@@ -2355,6 +2357,14 @@ const Notes = ({ data, actions }) => {
     </div>
   );
 };
+
+
+const PlaceholderPage = ({ title, children }) => (
+  <div style={S.page}>
+    <h1 style={S.pageTitle}>{title}</h1>
+    <div style={{ marginTop: 20 }}>{children}</div>
+  </div>
+);
 
 const Assistant = ({ data, helpers, actions }) => {
   const [messages, setMessages] = useState([]);
@@ -2388,14 +2398,14 @@ const Assistant = ({ data, helpers, actions }) => {
         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
           {messages.map((m, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
-              <div style={{ maxWidth: '75%', padding: '8px 12px', borderRadius: 10, background: m.role === 'user' ? C.goldDim : C.bgHover, color: C.text, fontFamily: font.body, fontSize: 13, whiteSpace: 'pre-wrap' }}>{m.content}</div>
+              <div style={{ maxWidth: '75%', padding: '8px 12px', borderRadius: 10, background: m.role === 'user' ? C.accentDim : C.bgHover, color: C.text, fontFamily: font.body, fontSize: 13, whiteSpace: 'pre-wrap' }}>{m.content}</div>
             </div>
           ))}
           {loading && <div style={{ fontFamily: font.body, fontSize: 12, color: C.textDim, padding: 8 }}>Denke nach...</div>}
         </div>
         <div style={{ display: 'flex', gap: 8, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
           <input style={{ ...S.input, flex: 1 }} placeholder="Frage stellen..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} />
-          <button onClick={send} style={{ ...S.btn, ...S.btnGold }} disabled={loading}>Senden</button>
+          <button onClick={send} style={{ ...S.btn, ...S.btnPrimary }} disabled={loading}>Senden</button>
         </div>
       </div>
     </PlaceholderPage>
@@ -2413,16 +2423,16 @@ const Settings = ({ data, actions }) => {
         <div style={S.card}>
           <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Sicherheit</h3>
           <FormRow label="PIN"><input style={S.input} type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="4-stellig" /></FormRow>
-          <button onClick={() => actions.updateSettings({ pin })} style={{ ...S.btn, ...S.btnGold, marginTop: 8 }}>PIN speichern</button>
+          <button onClick={() => actions.updateSettings({ pin })} style={{ ...S.btn, ...S.btnPrimary, marginTop: 8 }}>PIN speichern</button>
         </div>
         <div style={S.card}>
           <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Claude API</h3>
           <FormRow label="API Key"><input style={S.input} type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." /></FormRow>
-          <button onClick={() => actions.updateSettings({ apiKey })} style={{ ...S.btn, ...S.btnGold, marginTop: 8 }}>Key speichern</button>
+          <button onClick={() => actions.updateSettings({ apiKey })} style={{ ...S.btn, ...S.btnPrimary, marginTop: 8 }}>Key speichern</button>
         </div>
         <div style={S.card}>
           <h3 style={{ fontFamily: font.head, fontSize: 18, color: C.text, margin: '0 0 14px' }}>Backup</h3>
-          <button onClick={actions.exportData} style={{ ...S.btn, ...S.btnGold, marginBottom: 10 }}>Export JSON</button>
+          <button onClick={actions.exportData} style={{ ...S.btn, ...S.btnPrimary, marginBottom: 10 }}>Export JSON</button>
           <FormRow label="Import"><textarea style={{ ...S.input, minHeight: 60, resize: 'vertical' }} placeholder="JSON einfügen..." value={importJson} onChange={e => setImportJson(e.target.value)} /></FormRow>
           <button onClick={() => { if (actions.importData(importJson)) setImportJson(''); }} style={{ ...S.btn, ...S.btnGhost }}>Importieren</button>
         </div>
